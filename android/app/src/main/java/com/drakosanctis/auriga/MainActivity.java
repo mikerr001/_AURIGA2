@@ -26,6 +26,7 @@ import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.core.view.GravityCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -377,10 +378,10 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         Button menuBtn = findViewById(R.id.menu_toggle);
         if (menuBtn != null && drawerLayout != null) {
             menuBtn.setOnClickListener(v -> {
-                if (drawerLayout.isDrawerOpen(Gravity.START)) {
-                    drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
                 } else {
-                    drawerLayout.openDrawer(Gravity.START);
+                    drawerLayout.openDrawer(GravityCompat.START);
                 }
             });
         }
@@ -403,14 +404,14 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navHome = findViewById(R.id.nav_home);
         if (navHome != null) {
             navHome.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
             });
         }
 
         View navReader = findViewById(R.id.nav_reader);
         if (navReader != null) {
             navReader.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 launchReader();
             });
         }
@@ -422,7 +423,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navTargets = findViewById(R.id.nav_targets);
         if (navTargets != null) {
             navTargets.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 try {
                     startActivity(new Intent(this, TargetsActivity.class));
                 } catch (Throwable t) {
@@ -436,7 +437,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navAbout = findViewById(R.id.nav_about);
         if (navAbout != null) {
             navAbout.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(AboutActivity.class, "About");
             });
         }
@@ -445,7 +446,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navCalibrate = findViewById(R.id.nav_calibrate);
         if (navCalibrate != null) {
             navCalibrate.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(CalibrationWalkActivity.class, "Calibration walk");
             });
         }
@@ -454,7 +455,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         TextView feedbackHint = findViewById(R.id.nav_feedback_hint);
         if (navFeedback != null) {
             navFeedback.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 launchFeedback();
             });
         }
@@ -541,7 +542,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navHelp = findViewById(R.id.nav_help);
         if (navHelp != null) {
             navHelp.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(HelpActivity.class, "Help");
             });
         }
@@ -549,7 +550,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navSupport = findViewById(R.id.nav_support);
         if (navSupport != null) {
             navSupport.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(SupportActivity.class, "Support");
             });
         }
@@ -558,7 +559,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navContributeCalibration = findViewById(R.id.nav_contribute_calibration);
         if (navContributeCalibration != null) {
             navContributeCalibration.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(ContributeActivity.class, "Contribute");
             });
         }
@@ -566,7 +567,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         View navContributeSdk = findViewById(R.id.nav_contribute_sdk);
         if (navContributeSdk != null) {
             navContributeSdk.setOnClickListener(v -> {
-                if (drawerLayout != null) drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.closeDrawer(GravityCompat.START);
                 safeStart(ContributeActivity.class, "Contribute");
             });
         }
@@ -911,8 +912,8 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
      */
     @Override
     public void onBackPressed() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
             return;
         }
         super.onBackPressed();
