@@ -104,6 +104,7 @@ public class CameraStreamActivity extends ComponentActivity {
 
     @Override
     public void onRequestPermissionsResult(int req, @NonNull String[] ps, @NonNull int[] gs) {
+        super.onRequestPermissionsResult(req, ps, gs);
         if (req == CAM_REQ && gs.length > 0 && gs[0] == PackageManager.PERMISSION_GRANTED) {
             startStream();
         } else {
