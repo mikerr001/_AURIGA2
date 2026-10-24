@@ -24,6 +24,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 /**
@@ -130,10 +131,10 @@ public class LocatorWebActivity extends Activity {
         Button menuBtn = findViewById(R.id.menu_toggle);
         if (menuBtn != null && drawerLayout != null) {
             menuBtn.setOnClickListener(v -> {
-                if (drawerLayout.isDrawerOpen(Gravity.START)) {
-                    drawerLayout.closeDrawer(Gravity.START);
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
                 } else {
-                    drawerLayout.openDrawer(Gravity.START);
+                    drawerLayout.openDrawer(GravityCompat.START);
                 }
             });
         }
@@ -258,8 +259,8 @@ public class LocatorWebActivity extends Activity {
     }
 
     private void closeDrawer() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
         }
     }
 
@@ -479,8 +480,8 @@ public class LocatorWebActivity extends Activity {
      */
     @Override
     public void onBackPressed() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
             return;
         }
         if (webView != null && webView.canGoBack()) {
@@ -495,8 +496,8 @@ public class LocatorWebActivity extends Activity {
         // Keep the legacy KEYCODE_BACK path so hardware back keys on
         // older devices behave the same as the gesture / system back.
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-                drawerLayout.closeDrawer(Gravity.START);
+            if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START);
                 return true;
             }
             if (webView != null && webView.canGoBack()) {
