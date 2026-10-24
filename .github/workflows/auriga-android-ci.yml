@@ -27,6 +27,10 @@ jobs:
           cache: gradle
           cache-dependency-path: android/**/*.gradle*
       - uses: android-actions/setup-android@v3
+        with:
+          # `tools` is a retired SDK package and makes sdkmanager exit 1.
+          # Install only current SDK packages required by compileSdk 34.
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
       - name: Verify project paths
         run: |
           test -f android/gradlew
