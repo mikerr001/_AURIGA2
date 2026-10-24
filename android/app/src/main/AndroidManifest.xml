@@ -245,6 +245,10 @@
              alarm + reminder skill (AurigaSkillEngine). Must be registered
              here to fire when the app is in the background or killed. -->
         <receiver
+            android:name=".UsbPermissionReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".AurigaAlarmReceiver"
             android:exported="false">
             <intent-filter>
