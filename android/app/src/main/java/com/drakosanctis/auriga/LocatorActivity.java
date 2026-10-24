@@ -40,6 +40,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -509,7 +510,7 @@ public class LocatorActivity extends ComponentActivity {
             }
             @Override
             public void onOpenDrawer()  {
-                if (drawerLayout != null) drawerLayout.openDrawer(Gravity.START);
+                if (drawerLayout != null) drawerLayout.openDrawer(GravityCompat.START);
             }
             @Override
             public void onCloseDrawer() { closeDrawer(); }
@@ -1087,7 +1088,7 @@ public class LocatorActivity extends ComponentActivity {
         if (menu != null) {
             menu.setOnClickListener(v -> {
                 if (drawerLayout != null) {
-                    drawerLayout.openDrawer(Gravity.START);
+                    drawerLayout.openDrawer(GravityCompat.START);
                 }
             });
         }
@@ -1343,8 +1344,8 @@ public class LocatorActivity extends ComponentActivity {
     }
 
     private void closeDrawer() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
         }
     }
 
@@ -1377,8 +1378,8 @@ public class LocatorActivity extends ComponentActivity {
 
     @Override
     public void onBackPressed() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
             return;
         }
         super.onBackPressed();
@@ -1388,8 +1389,8 @@ public class LocatorActivity extends ComponentActivity {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK
                 && drawerLayout != null
-                && drawerLayout.isDrawerOpen(Gravity.START)) {
-            drawerLayout.closeDrawer(Gravity.START);
+                && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
             return true;
         }
         return super.onKeyDown(keyCode, event);
