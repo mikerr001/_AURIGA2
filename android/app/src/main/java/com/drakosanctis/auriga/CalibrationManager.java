@@ -17,6 +17,7 @@ public class CalibrationManager {
     private final FiducialLUT lut;
     private final ColorSquareDetector detector;
     private final List<Float> targetDistances = new ArrayList<>();
+    private final List<FiducialLUT.TrainingPoint> capturedPoints = new ArrayList<>();
     private int currentPointIndex = 0;
 
     public CalibrationManager(FiducialLUT lut, ColorSquareDetector detector) {
@@ -36,7 +37,7 @@ public class CalibrationManager {
         if (currentState != State.DETECTING) return null;
 
         ColorSquareDetector.DetectionResult result = detector.detect(frame);
-        if (result.confidence > 0.8f) {
+        if (result != null && result.confidence > 0.8f) {
             // Found a stable lock on the 20cm square
             return result;
         }
@@ -47,13 +48,18 @@ public class CalibrationManager {
      * capturePoint: Saves the current pixel width and row for the target distance.
      */
     public void capturePoint(float pixelWidth, float pixelRow) {
+        if (currentPointIndex < 0 || currentPointIndex >= targetDistances.size()
+                || !Float.isFinite(pixelWidth) || !Float.isFinite(pixelRow)
+                || pixelWidth <= 0f || pixelRow < 0f) return;
         float distanceM = targetDistances.get(currentPointIndex);
-        lut.addPoint(distanceM, pixelWidth, pixelRow);
-        
+        capturedPoints.add(new FiducialLUT.TrainingPoint(distanceM, pixelWidth, pixelRow));
+
         currentPointIndex++;
         if (currentPointIndex >= targetDistances.size()) {
             currentState = State.COMPLETE;
-            lut.persist(); // Finalize and save to SharedPreferences
+            // A guided walk does not prove the physical distances or camera
+            // geometry. Keep these points as an unapproved candidate.
+            lut.loadProfile(capturedPoints, "on-device-candidate", false);
         } else {
             currentState = State.IDLE;
         }
@@ -61,7 +67,10 @@ public class CalibrationManager {
 
     public void setState(State state) { this.currentState = state; }
     public State getState() { return currentState; }
-    public float getNextDistance() { return targetDistances.get(currentPointIndex); }
+    public float getNextDistance() {
+        return currentPointIndex >= targetDistances.size()
+                ? -1f : targetDistances.get(currentPointIndex);
+    }
     public int getProgress() { return currentPointIndex; }
     public int getTotalPoints() { return targetDistances.size(); }
 }

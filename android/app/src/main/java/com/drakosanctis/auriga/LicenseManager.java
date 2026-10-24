@@ -44,12 +44,8 @@ public class LicenseManager {
         // - Check 'valid_until' date vs current system time
         // - Trigger async network call if close to expiry
         
-        // Mock implementation for development:
-        if (licenseKey != null && licenseKey.startsWith("AURIGA-PREMIUM")) {
-            AurigaConfig.CURRENT_TIER = AurigaConfig.Tier.PREMIUM;
-            return true;
-        }
-        
+        // No signed-license verifier or production key protocol is implemented.
+        // Do not grant a paid tier based on a guessable string prefix.
         AurigaConfig.CURRENT_TIER = AurigaConfig.Tier.FREE;
         return false;
     }

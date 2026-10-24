@@ -111,7 +111,7 @@ public class ProximityEarconManager {
 
     /** Returns beep interval in ms, or -1 for silence. */
     private static int intervalMs(float d) {
-        if (d <= 0 || d > MAX_DISTANCE_M) return -1;
+        if (!Float.isFinite(d) || d <= 0 || d > MAX_DISTANCE_M) return -1;
         if (d < 0.5f) return  60;
         if (d < 1.0f) return 130;
         if (d < 2.0f) return 280;

@@ -6,13 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * DracoAIDEngine — "Virtual Snap" auto-calibration.
+ * DracoAIDEngine — experimental legacy auto-calibration.
  *
- * Watches every frame's YOLO detection list. The moment a "person"
- * detection appears with the bounding box straddling the frame in a
- * way that lets us solve for camera height H_c, it does so silently
- * and rebuilds the FiducialLUT with a physics-derived table — no
- * physical marker, no calibration walk required.
+ * Disabled for camera-only V1. A human-height prior and a bounding box do not
+ * establish camera height or metric scale. They cannot authorize a metric LUT.
  *
  * The H_c solve (derivation):
  *
@@ -45,6 +42,7 @@ public class DracoAIDEngine {
     private static final String TAG = "DracoAIDEngine";
 
     private static final String COCO_PERSON = "person";
+    private static final boolean CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED = false;
 
     private static final float  PERSON_HEIGHT_M   = 1.70f;
     private static final float  HC_MIN_M          = 0.40f;
@@ -71,7 +69,8 @@ public class DracoAIDEngine {
         // Re-apply any previously committed H_c from persistent storage
         // so the LUT is physics-based on first frame even before the
         // first person is seen.
-        float stored = hal.loadStoredHc();
+        float stored = CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED && hal != null
+                ? hal.loadStoredHc() : -1f;
         if (stored > 0f) {
             committedHc = stored;
             Log.d(TAG, "Restored H_c from storage: " + stored + " m");
@@ -90,6 +89,7 @@ public class DracoAIDEngine {
      */
     public void processFrame(List<Detection> detections,
                              int frameW, int frameH) {
+        if (!CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED) return;
         this.frameWidth  = frameW;
         this.frameHeight = frameH;
 
@@ -136,7 +136,7 @@ public class DracoAIDEngine {
      * LocatorActivity shows a "calibrating…" overlay until this is ≥ 0.
      */
     public float getCommittedHc() {
-        return committedHc;
+        return CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED ? committedHc : -1f;
     }
 
     /**
@@ -144,7 +144,7 @@ public class DracoAIDEngine {
      * from at least one stable H_c solve or a restored stored value.
      */
     public boolean isCalibrated() {
-        return committedHc > 0f;
+        return CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED && committedHc > 0f;
     }
 
     /**
@@ -294,6 +294,7 @@ public class DracoAIDEngine {
      * persists the value, and clears the accumulation buffer.
      */
     private void commit(float hc, int fH) {
+        if (!CAMERA_ONLY_V1_AUTOCALIBRATION_ENABLED) return;
         committedHc = hc;
         lastCalTime = System.currentTimeMillis();
         hcBuffer.clear();

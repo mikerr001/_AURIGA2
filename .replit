@@ -39,12 +39,12 @@ waitForPort = 5000
 name = "Netlify Auto-Deploy"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node scripts/watch-deploy.js"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[ports]]
 localPort = 5000

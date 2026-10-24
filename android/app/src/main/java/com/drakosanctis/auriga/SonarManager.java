@@ -30,6 +30,11 @@ public class SonarManager {
      * updateSpatialData: Updates the feedback loop with new distance and bearing.
      */
     public void updateSpatialData(float distanceM, float bearingDeg, String signature) {
+        if (!Float.isFinite(distanceM) || distanceM <= 0f
+                || !Float.isFinite(bearingDeg)) {
+            silence();
+            return;
+        }
         this.currentDistance = distanceM;
         this.currentBearing = bearingDeg;
         this.currentSignature = signature;
@@ -41,11 +46,11 @@ public class SonarManager {
 
     private void startLoop() {
         isPlaying = true;
-        handler.post(new Runnable() {
+        sonarTask = new Runnable() {
             @Override
             public void run() {
-                if (currentDistance <= 0 || !isPlaying) {
-                    isPlaying = false;
+                if (!Float.isFinite(currentDistance) || currentDistance <= 0 || !isPlaying) {
+                    silence();
                     return;
                 }
 
@@ -56,7 +61,19 @@ public class SonarManager {
                 long interval = (long) Math.max(160, currentDistance * 420);
                 handler.postDelayed(this, interval);
             }
-        });
+        };
+        handler.post(sonarTask);
+    }
+
+    private Runnable sonarTask;
+
+    private void silence() {
+        currentDistance = -1f;
+        isPlaying = false;
+        if (sonarTask != null) {
+            handler.removeCallbacks(sonarTask);
+            sonarTask = null;
+        }
     }
 
     /**
@@ -110,7 +127,7 @@ public class SonarManager {
     }
 
     public void stop() {
-        isPlaying = false;
+        silence();
         if (audioTrack != null) {
             audioTrack.release();
         }

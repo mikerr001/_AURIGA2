@@ -27,10 +27,9 @@ import java.util.List;
  *   - getDistanceFromWidth(pixelWidth): used during calibration when the
  *     fiducial is a known 20cm square and its observed width fixes the
  *     distance.
- *   - getDistanceFromRow(pixelRow) / getDistanceFromRowWithPitch(...):
- *     the runtime TruePath path. Row is a proxy for ground distance
- *     given a known camera height and pitch. The pitch-aware variant
- *     applies a horizon offset so handheld tilt does not bias readings.
+ *   - row lookup helpers are retained for calibration diagnostics only.
+ *     A bounding-box row is not a ground-plane intersection; production
+ *     ranging requires validated plane/contact evidence from the spatial engine.
  *
  * Calibration data can be loaded in two ways:
  *   1. The legacy in-class defaults (synthetic, calibrated against a
@@ -63,6 +62,7 @@ public class FiducialLUT {
     // split a read across two different lists.
     private volatile List<TrainingPoint> points = new ArrayList<>();
     private volatile boolean usingTrainedProfile = false;
+    private volatile boolean metricScaleApproved = false;
     // Human-readable tag describing where the currently-loaded profile
     // came from. Surfaced in the diagnostic overlay so a field
     // operator can tell at a glance whether the LUT is running off
@@ -93,10 +93,18 @@ public class FiducialLUT {
         addPoint(5.0f, 80.0f, 262.0f);
     }
 
-    public void addPoint(float distanceM, float pixelWidth, float pixelRow) {
+    public synchronized void addPoint(float distanceM, float pixelWidth, float pixelRow) {
+        if (!Float.isFinite(distanceM) || !Float.isFinite(pixelWidth)
+                || !Float.isFinite(pixelRow) || distanceM <= 0f
+                || pixelWidth <= 0f || pixelRow < 0f) return;
         List<TrainingPoint> next = new ArrayList<>(points);
         next.add(new TrainingPoint(distanceM, pixelWidth, pixelRow));
         points = next;
+        if (usingTrainedProfile || metricScaleApproved) {
+            usingTrainedProfile = false;
+            metricScaleApproved = false;
+            profileSource = "candidate";
+        }
     }
 
     /**
@@ -107,7 +115,7 @@ public class FiducialLUT {
      * "using device-specific calibration" state.
      */
     public void loadProfile(List<TrainingPoint> profile) {
-        loadProfile(profile, "on-device");
+        loadProfile(profile, "candidate", false);
     }
 
     /**
@@ -117,6 +125,15 @@ public class FiducialLUT {
      * back to "on-device" which matches the pre-overload behavior.
      */
     public void loadProfile(List<TrainingPoint> profile, String source) {
+        loadProfile(profile, source, false);
+    }
+
+    /**
+     * Publish a sanitized profile. Approval can only be supplied by the
+     * physical-validation pathway; a label or ordinary calibration walk is
+     * never enough to authorize metric output.
+     */
+    void loadProfile(List<TrainingPoint> profile, String source, boolean approved) {
         if (profile == null) return;
         // Sanitize first: filter non-finite values, sort by distanceM,
         // and drop entries whose distance / pixelWidth / pixelRow would
@@ -125,7 +142,10 @@ public class FiducialLUT {
         // smoother with NaN -- a permanently broken readout for a
         // navigation aid used by blind users.
         List<TrainingPoint> cleaned = new ArrayList<>(profile.size());
-        List<TrainingPoint> sorted = new ArrayList<>(profile);
+        List<TrainingPoint> sorted = new ArrayList<>(profile.size());
+        for (TrainingPoint point : profile) {
+            if (point != null) sorted.add(point);
+        }
         Collections.sort(sorted, new Comparator<TrainingPoint>() {
             @Override public int compare(TrainingPoint a, TrainingPoint b) {
                 return Float.compare(a.distanceM, b.distanceM);
@@ -136,7 +156,8 @@ public class FiducialLUT {
             if (p == null) continue;
             if (Float.isNaN(p.distanceM) || Float.isInfinite(p.distanceM)
                     || Float.isNaN(p.pixelWidth) || Float.isInfinite(p.pixelWidth)
-                    || Float.isNaN(p.pixelRow) || Float.isInfinite(p.pixelRow)) {
+                    || Float.isNaN(p.pixelRow) || Float.isInfinite(p.pixelRow)
+                    || p.distanceM <= 0f || p.pixelWidth <= 0f || p.pixelRow < 0f) {
                 continue;
             }
             if (prev != null) {
@@ -158,15 +179,43 @@ public class FiducialLUT {
         // a half-cleared view.
         points = cleaned;
         usingTrainedProfile = true;
+        metricScaleApproved = approved && cleaned.size() >= 10;
         if (source != null && !source.trim().isEmpty()) {
             profileSource = source.trim();
         } else {
-            profileSource = "on-device";
+            profileSource = "candidate";
         }
     }
 
     public boolean isUsingTrainedProfile() {
         return usingTrainedProfile;
+    }
+
+    /** Synthetic and candidate profiles never authorize metric output. */
+    public boolean isMetricScaleTrusted() {
+        return usingTrainedProfile && metricScaleApproved && points.size() >= 10;
+    }
+
+    public boolean isRowWithinProfile(float row) {
+        if (!isMetricScaleTrusted() || !Float.isFinite(row)) return false;
+        float min = Float.POSITIVE_INFINITY;
+        float max = Float.NEGATIVE_INFINITY;
+        for (TrainingPoint point : points) {
+            min = Math.min(min, point.pixelRow);
+            max = Math.max(max, point.pixelRow);
+        }
+        return row >= min && row <= max;
+    }
+
+    public boolean isWidthWithinProfile(float width) {
+        if (!isMetricScaleTrusted() || !Float.isFinite(width) || width <= 0f) return false;
+        float min = Float.POSITIVE_INFINITY;
+        float max = Float.NEGATIVE_INFINITY;
+        for (TrainingPoint point : points) {
+            min = Math.min(min, point.pixelWidth);
+            max = Math.max(max, point.pixelWidth);
+        }
+        return width >= min && width <= max;
     }
 
     /**
@@ -220,8 +269,8 @@ public class FiducialLUT {
         }
         List<TrainingPoint> matched = parseProfileJson(body, manufacturer, model);
         if (matched == null || matched.size() < 2) return false;
-        loadProfile(matched, "asset");
-        return true;
+        loadProfile(matched, "asset", true);
+        return isMetricScaleTrusted();
     }
 
     /**
@@ -240,14 +289,27 @@ public class FiducialLUT {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject row = arr.getJSONObject(i);
                 if (!row.optBoolean("approved", false)) continue;
+                int referenceWidth = row.optInt("reference_frame_width", 0);
+                int referenceHeight = row.optInt("reference_frame_height", 0);
+                double cameraHfov = row.optDouble("camera_hfov_degrees", Double.NaN);
+                double planeAngle = row.optDouble("plane_angle_degrees", Double.NaN);
+                String cameraId = row.optString("camera_id", "").trim();
+                String method = row.optString("calibration_method", "").trim();
+                String validation = row.optString("validation_status", "").trim();
+                if (referenceWidth <= 0 || referenceHeight <= 0 || cameraId.isEmpty()
+                        || !Double.isFinite(cameraHfov) || cameraHfov <= 1d || cameraHfov >= 179d
+                        || !Double.isFinite(planeAngle) || planeAngle < -90d || planeAngle > 90d
+                        || !"physical_fiducial".equals(method)
+                        || !"physically_validated".equals(validation)) continue;
                 String rowManu = row.optString("manufacturer", "").trim();
                 String rowModel = row.optString("model", "").trim();
                 boolean manuMatches = rowManu.isEmpty()
                         || wantedManu.equalsIgnoreCase(rowManu);
                 boolean modelMatches = wantedModel.equalsIgnoreCase(rowModel);
                 if (!(manuMatches && modelMatches)) continue;
+                if (!cameraId.equalsIgnoreCase(wantedModel)) continue;
                 JSONArray pts = row.optJSONArray("calibration_points");
-                if (pts == null) continue;
+                if (pts == null || pts.length() < 10) continue;
                 List<TrainingPoint> out = new ArrayList<>(pts.length());
                 for (int j = 0; j < pts.length(); j++) {
                     JSONObject p = pts.getJSONObject(j);
@@ -325,7 +387,9 @@ public class FiducialLUT {
         }
 
         if (pts.size() >= 2) {
-            loadProfile(pts, "dynamic-hc");
+            // A monocular camera-height hypothesis is not physical
+            // calibration and must not become metric ground truth.
+            loadProfile(pts, "dynamic-hc", false);
         }
     }
 
@@ -340,7 +404,8 @@ public class FiducialLUT {
      * the Hermite spline still receives strictly increasing x.
      */
     public float getDistanceFromWidth(float pixelWidth) {
-        if (points.size() < 2) return -1.0f;
+        if (!isMetricScaleTrusted() || points.size() < 10
+                || !Float.isFinite(pixelWidth) || !isWidthWithinProfile(pixelWidth)) return -1.0f;
         return interpolate(pixelWidth, Axis.WIDTH_DECREASING);
     }
 
@@ -354,7 +419,8 @@ public class FiducialLUT {
      * the current device pitch should use getDistanceFromRowWithPitch.
      */
     public float getDistanceFromRow(float pixelRow) {
-        if (points.size() < 2) return -1.0f;
+        if (!isMetricScaleTrusted() || points.size() < 10
+                || !isRowWithinProfile(pixelRow)) return -1.0f;
         return interpolate(pixelRow, Axis.ROW_DECREASING);
     }
 
@@ -373,9 +439,9 @@ public class FiducialLUT {
      */
     public float getDistanceFromRowWithPitch(
             float pixelRow, float pitchRad, float focalPx) {
-        if (points.size() < 2) return -1.0f;
-        float shift = focalPx * (float) Math.tan(pitchRad);
-        return interpolate(pixelRow - shift, Axis.ROW_DECREASING);
+        // Kept for binary/source compatibility only. Device pitch is optional
+        // and is not a metric source in camera-only V1.
+        return -1.0f;
     }
 
     /**
@@ -386,8 +452,22 @@ public class FiducialLUT {
      * frames.
      */
     public float getPixelWidthAtDistance(float distanceM) {
-        if (points.size() < 2) return -1.0f;
+        if (!isMetricScaleTrusted() || points.size() < 10
+                || !Float.isFinite(distanceM) || distanceM < getMinDistanceM()
+                || distanceM > getMaxDistanceM()) return -1.0f;
         return interpolate(distanceM, Axis.DISTANCE_TO_WIDTH);
+    }
+
+    public float getMinDistanceM() {
+        float min = Float.POSITIVE_INFINITY;
+        for (TrainingPoint point : points) min = Math.min(min, point.distanceM);
+        return Float.isFinite(min) ? min : -1f;
+    }
+
+    public float getMaxDistanceM() {
+        float max = Float.NEGATIVE_INFINITY;
+        for (TrainingPoint point : points) max = Math.max(max, point.distanceM);
+        return Float.isFinite(max) ? max : -1f;
     }
 
     // ---------------------------------------------------------------
