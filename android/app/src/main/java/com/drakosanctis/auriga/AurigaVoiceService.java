@@ -23,6 +23,8 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.util.Log;
 
+import androidx.core.content.ContextCompat;
+
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -149,8 +151,10 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
     private void startVadLoop() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            Log.w(TAG, "Microphone permission not granted; falling back to permission-aware recognizer flow.");
-            fallbackToRecognizerLoop();
+            Log.w(TAG, "Microphone permission not granted; voice wake-word service will stop until permission is granted.");
+            // SpeechRecognizer also needs microphone access. Do not start a fallback
+            // loop that repeatedly fails or attempts to access protected audio.
+            stopSelf();
             return;
         }
         int minBuf = AudioRecord.getMinBufferSize(
