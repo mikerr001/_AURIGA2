@@ -457,11 +457,8 @@ public class LocatorActivity extends ComponentActivity {
 
         // Wake-word broadcast from AurigaVoiceService.
         IntentFilter filter = new IntentFilter(AurigaVoiceEngine.ACTION_WAKE_WORD);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(wakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(wakeReceiver, filter);
-        }
+        androidx.core.content.ContextCompat.registerReceiver(
+                this, wakeReceiver, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
 
         // First-run: launch name-setup if not yet done.
         if (!AurigaVoiceEngine.isSetupDone(this)) {
