@@ -48,6 +48,28 @@ jobs:
       - name: Run Navi lint
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace lintNaviDebug
+      - name: Print all lint errors for diagnosis
+        if: always()
+        working-directory: android
+        run: |
+          python3 - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          report = "app/build/reports/lint-results-naviDebug.xml"
+          if not os.path.exists(report):
+              print("Lint XML report not generated.")
+              raise SystemExit(0)
+          root = ET.parse(report).getroot()
+          issues = [issue for issue in root.findall("issue")
+                    if issue.attrib.get("severity", "").lower() in ("error", "fatal")]
+          print(f"Lint error/fatal issues: {len(issues)}")
+          for issue in issues:
+              loc = issue.find("location")
+              where = ""
+              if loc is not None:
+                  where = f"{loc.attrib.get('file', '?')}:{loc.attrib.get('line', '?')}: "
+              print(f"- {where}{issue.attrib.get('id', 'Unknown')}: {issue.attrib.get('message', '')}")
+          PY
       - name: Assemble Navi debug APK
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace assembleNaviDebug
