@@ -1,18 +1,9 @@
 [build]
-  # Netlify auto-deploys this repo but without an explicit publish
-  # directory it was serving the repo root, so the public landing
-  # fell back to an outdated index.html (no mobile MENU drawer, no
-  # calibration form wiring). Pinning to AURIGA/web_deploy so every
-  # push to main builds the real public site.
-  publish = "AURIGA/web_deploy"
+  # Canonical website source lives under website/web_deploy in this repository.
+  publish = "website/web_deploy"
 
-  # Functions directory for the AurigaNavi feedback intake (D1=C).
-  # The Android app POSTs JSON to /.netlify/functions/submit-feedback;
-  # the function (AURIGA/netlify/functions/submit-feedback.js) optionally
-  # forwards to a Slack/Discord/Zapier webhook and/or files a GitHub issue
-  # depending on the FEEDBACK_FORWARD_WEBHOOK / FEEDBACK_GITHUB_REPO /
-  # FEEDBACK_GITHUB_TOKEN environment variables set in the Netlify UI.
-  functions = "AURIGA/netlify/functions"
+  # Netlify serverless feedback intake.
+  functions = "website/netlify/functions"
 
 [[headers]]
   for = "/*"
