@@ -3,12 +3,15 @@ package com.drakosanctis.auriga;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import java.util.Locale;
@@ -89,6 +92,13 @@ public class AurigaAlarmReceiver extends BroadcastReceiver {
     }
 
     private void showNotification(Context context, String title, String body) {
+        // A receiver cannot show the Android 13+ permission dialog. Preserve TTS
+        // and vibration, but skip notifications until the user grants permission.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
         try {
             NotificationCompat.Builder builder = new NotificationCompat.Builder(
                     context, AurigaSkillEngine.CHANNEL_ID)
