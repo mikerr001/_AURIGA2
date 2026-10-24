@@ -34,6 +34,10 @@ jobs:
           test -f android/gradle/wrapper/gradle-wrapper.properties
           test -f android/app/build.gradle
           test -f website/web_deploy/index.html
+          test -f netlify.toml
+          test -f website/netlify/functions/submit-feedback.js
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
       - name: Run Navi unit tests
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace testNaviDebugUnitTest
