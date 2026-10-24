@@ -198,8 +198,17 @@ public class OdometryManager {
             }
         }
 
-        float bestX = (sumWeight > 0) ? sumX / sumWeight : centerX;
-        float bestY = (sumWeight > 0) ? sumY / sumWeight : centerY;
+        // No usable visual texture means tracking is unavailable, not
+        // that the camera stayed still. Reset the anchor so the next valid
+        // frame starts a fresh baseline instead of fabricating zero motion.
+        if (!Float.isFinite(sumWeight) || sumWeight <= 0.0f) {
+            lastAnchorX = -1.0f;
+            lastAnchorY = -1.0f;
+            lastShiftMagnitude = Float.POSITIVE_INFINITY;
+            return new float[]{Float.NaN, Float.NaN};
+        }
+        float bestX = sumX / sumWeight;
+        float bestY = sumY / sumWeight;
 
         float deltaX = 0, deltaY = 0;
         if (lastAnchorX != -1.0f) {
