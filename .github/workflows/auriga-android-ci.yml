@@ -1,0 +1,56 @@
+name: Auriga Arael Android CI
+
+on:
+  push:
+    branches: [auriga-arael-1]
+  pull_request:
+    branches: [main, auriga-arael-1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auriga-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: android/**/*.gradle*
+      - uses: android-actions/setup-android@v3
+      - name: Verify project paths
+        run: |
+          test -f android/gradlew
+          test -f android/gradle/wrapper/gradle-wrapper.jar
+          test -f android/gradle/wrapper/gradle-wrapper.properties
+          test -f android/app/build.gradle
+          test -f website/web_deploy/index.html
+      - name: Run Navi unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace testNaviDebugUnitTest
+      - name: Run Navi lint
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace lintNaviDebug
+      - name: Assemble Navi debug APK
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace assembleNaviDebug
+      - name: Upload APK and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auriga-arael-navi-debug-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            android/app/build/outputs/apk/navi/debug/*.apk
+            android/app/build/reports/**
+            android/app/build/test-results/**
