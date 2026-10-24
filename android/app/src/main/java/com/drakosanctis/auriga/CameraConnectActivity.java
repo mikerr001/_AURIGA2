@@ -503,7 +503,8 @@ public class CameraConnectActivity extends Activity {
             // Request permission — Android will call back via ACTION_USB_PERMISSION broadcast
             android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(
                     this, 0,
-                    new android.content.Intent("com.drakosanctis.auriga.USB_PERMISSION"),
+                    new android.content.Intent(this, UsbPermissionReceiver.class)
+                            .setAction(UsbPermissionReceiver.ACTION_USB_PERMISSION),
                     android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_MUTABLE);
             usbManager.requestPermission(usbSerialDevice, pi);
             toast("USB permission requested — tap ALLOW then connect again.");
