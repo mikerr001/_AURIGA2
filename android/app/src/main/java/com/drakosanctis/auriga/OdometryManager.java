@@ -60,7 +60,14 @@ public class OdometryManager {
      *             camera motion, not real object motion.
      */
     public float smoothDistance(int column, float newDistance, float confidence, float shiftMag) {
-        if (column < 0 || column >= COLS) return newDistance;
+        if (column < 0 || column >= COLS) return Float.NaN;
+        // Never let invalid detector output or confidence poison persistent
+        // smoothing state. An uninitialised column has no safe prior value.
+        if (!Float.isFinite(newDistance) || !Float.isFinite(confidence)
+                || !Float.isFinite(shiftMag)) {
+            return distanceInit[column] ? smoothedDistances[column] : Float.NaN;
+        }
+        confidence = Math.max(0.0f, Math.min(1.0f, confidence));
 
         // Reject very low-confidence frames — threshold lowered from 0.3 to 0.15
         // so moderate-contrast scenes still contribute to the smoother.
@@ -111,7 +118,14 @@ public class OdometryManager {
      * source because bearing previously had no smoother at all.
      */
     public float smoothBearing(int column, float newBearingDeg, float confidence, float shiftMag) {
-        if (column < 0 || column >= COLS) return newBearingDeg;
+        if (column < 0 || column >= COLS) return Float.NaN;
+        // Reject non-finite bearing/quality inputs before they can enter
+        // the smoother; confidence is bounded so alpha cannot exceed 1.
+        if (!Float.isFinite(newBearingDeg) || !Float.isFinite(confidence)
+                || !Float.isFinite(shiftMag)) {
+            return bearingInit[column] ? smoothedBearings[column] : Float.NaN;
+        }
+        confidence = Math.max(0.0f, Math.min(1.0f, confidence));
 
         if (confidence < 0.15f && bearingInit[column]) {
             return smoothedBearings[column];
@@ -149,16 +163,30 @@ public class OdometryManager {
      * cached in lastShiftMagnitude for callers to read without recomputing.
      */
     public float[] calculateVisualShift(Bitmap frame) {
+        // Camera pipelines may briefly deliver null/degenerate frames during
+        // startup, rotation, or teardown. Fail closed rather than dereference
+        // null or read outside the bitmap.
+        if (frame == null || frame.isRecycled()
+                || frame.getWidth() <= 0 || frame.getHeight() <= 0) {
+            lastAnchorX = -1.0f;
+            lastAnchorY = -1.0f;
+            lastShiftMagnitude = Float.POSITIVE_INFINITY;
+            return new float[]{Float.NaN, Float.NaN};
+        }
         int width = frame.getWidth();
         int height = frame.getHeight();
         int centerX = width / 2;
         int centerY = height / 2;
         int searchRadius = 30;
+        int startX = Math.max(0, centerX - searchRadius);
+        int endX = Math.min(width, centerX + searchRadius);
+        int startY = Math.max(0, centerY - searchRadius);
+        int endY = Math.min(height, centerY + searchRadius);
 
         float sumX = 0, sumY = 0, sumWeight = 0;
 
-        for (int x = centerX - searchRadius; x < centerX + searchRadius; x++) {
-            for (int y = centerY - searchRadius; y < centerY + searchRadius; y++) {
+        for (int x = startX; x < endX; x++) {
+            for (int y = startY; y < endY; y++) {
                 int pixel = frame.getPixel(x, y);
                 int brightness = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3;
                 if (brightness > 100) {
