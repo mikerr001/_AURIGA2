@@ -5,7 +5,9 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.Sensor;
@@ -28,6 +30,7 @@ import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -571,6 +574,11 @@ public class AurigaSkillEngine {
         speak("Checking the weather. One moment.");
         try {
             LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+            if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                speak("Location permission is needed to get your local weather. Please enable it in Settings.");
+                return;
+            }
             Location loc = null;
             try {
                 loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
@@ -631,6 +639,11 @@ public class AurigaSkillEngine {
     ═══════════════════════════════════════════════════════════════ */
     private void handleGps() {
         try {
+            if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                speak("Location permission is needed. Please enable it in Settings.");
+                return;
+            }
             Location loc = null;
             try {
                 loc = locationMgr.getLastKnownLocation(LocationManager.GPS_PROVIDER);
