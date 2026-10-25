@@ -1,16 +1,42 @@
 [build]
-  # Canonical website source lives under website/web_deploy in this repository.
+  # Canonical public site; Android screens are native and do not load this bundle.
+  command = "npm ci --ignore-scripts"
   publish = "website/web_deploy"
-
-  # Netlify serverless feedback intake.
   functions = "website/netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "20"
 
 [[headers]]
   for = "/*"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+    X-Frame-Options = "SAMEORIGIN"
 
 [[headers]]
   for = "/data/*"
   [headers.values]
     Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[redirects]]
+  from = "/demo"
+  to = "/locator.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/camera"
+  to = "/camera-connect.html"
+  status = 302
+  force = false
