@@ -562,38 +562,54 @@ public class LocatorActivity extends ComponentActivity {
         analysisBound = false;
         torchPrimed = false;
 
-        // Bind preview first. A failure in image analysis must never leave the
-        // user staring at a black screen when the camera itself is available.
         Preview preview = new Preview.Builder().build();
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
-        cameraRef = provider.bindToLifecycle(this, selector, preview);
 
-        // Prefer RGBA for efficient bitmap conversion, but some camera/HAL
-        // combinations reject this output format or the combined use-case set.
+        // Try RGBA analysis and preview together. CameraX can replace/unbind
+        // previous use cases on a later bindToLifecycle call, so never bind
+        // analysis by itself after binding the preview.
         try {
             ImageAnalysis rgbaAnalysis = new ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                     .build();
             rgbaAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
-            cameraRef = provider.bindToLifecycle(this, selector, rgbaAnalysis);
+            provider.unbindAll();
+            cameraRef = provider.bindToLifecycle(this, selector, preview, rgbaAnalysis);
             analysisBound = true;
             Log.i(TAG, "Camera preview and RGBA analysis bound.");
+            return;
         } catch (Throwable rgbaError) {
             Log.w(TAG, "RGBA analysis unavailable; retrying default YUV analysis", rgbaError);
-            try {
-                ImageAnalysis yuvAnalysis = new ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build();
-                yuvAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
-                cameraRef = provider.bindToLifecycle(this, selector, yuvAnalysis);
-                analysisBound = true;
-                Log.i(TAG, "Camera preview and fallback YUV analysis bound.");
-            } catch (Throwable analysisError) {
-                // Keep the preview use case bound even when analysis fails.
-                Log.e(TAG, "Camera preview is available but analysis could not bind", analysisError);
-                analysisBound = false;
-            }
+        }
+
+        // Retry with YUV, still binding Preview and ImageAnalysis as one set.
+        try {
+            ImageAnalysis yuvAnalysis = new ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build();
+            yuvAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
+            provider.unbindAll();
+            cameraRef = provider.bindToLifecycle(this, selector, preview, yuvAnalysis);
+            analysisBound = true;
+            Log.i(TAG, "Camera preview and fallback YUV analysis bound.");
+            return;
+        } catch (Throwable analysisError) {
+            Log.e(TAG, "Image analysis could not bind; falling back to preview only", analysisError);
+        }
+
+        // Last-resort preview-only mode. The UI must clearly disclose that
+        // detection is unavailable rather than imply that live analysis works.
+        try {
+            provider.unbindAll();
+            cameraRef = provider.bindToLifecycle(this, selector, preview);
+            analysisBound = false;
+            Log.w(TAG, "Camera preview bound without image analysis.");
+        } catch (Throwable previewError) {
+            analysisBound = false;
+            cameraRef = null;
+            Log.e(TAG, "Camera preview could not bind", previewError);
+            throw previewError;
         }
     }
 
