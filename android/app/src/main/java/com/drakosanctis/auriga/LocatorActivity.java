@@ -511,6 +511,11 @@ public class LocatorActivity extends ComponentActivity {
     }
 
     private void startCamera() {
+        try {
+            VisualAnchorMap.getInstance(getApplicationContext()).beginSession();
+        } catch (Throwable mapError) {
+            Log.w(TAG, "Could not begin visual map session", mapError);
+        }
         ListenableFuture<ProcessCameraProvider> future =
                 ProcessCameraProvider.getInstance(this);
         future.addListener(() -> {
