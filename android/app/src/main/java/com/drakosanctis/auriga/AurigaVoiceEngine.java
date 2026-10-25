@@ -53,7 +53,7 @@ public class AurigaVoiceEngine implements RecognitionListener {
     public static final String PREF_VOICE_ENABLED    = "auriga_voice_nav_enabled";
     public static final String PREF_VOICE_SETUP_DONE = "auriga_voice_setup_done";
 
-    /** Broadcast action sent when the always-on service hears the wake phrase. */
+    /** Legacy broadcast action; the current native UI uses explicit mic activation. */
     public static final String ACTION_WAKE_WORD = "com.drakosanctis.auriga.VOICE_WAKE";
 
     // ── Callback interface ─────────────────────────────────────────
@@ -150,7 +150,7 @@ public class AurigaVoiceEngine implements RecognitionListener {
             Toast.makeText(activity, "Could not initialise speech recognition.", Toast.LENGTH_LONG).show();
             return;
         }
-        // The wake-word service owns AudioRecord. Let Android release the mic before recognition starts.
+        // Stop any legacy background recorder left running by older builds before recognition starts.
         listening = true;
         AurigaVoiceService.stopListening(activity);
         mainHandler.postDelayed(() -> {
