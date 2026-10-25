@@ -180,9 +180,15 @@ public class AurigaVoiceEngine implements RecognitionListener {
     }
 
     /** Stop the current listen cycle without changing system volume. */
+    public boolean isListening() {
+        return listening;
+    }
+
     public void stopListening() {
         listening = false;
-        try { if (recognizer != null) recognizer.cancel(); } catch (Throwable ignored) {}
+        try {
+            if (recognizer != null) recognizer.cancel();
+        } catch (Throwable ignored) {}
         if (listener != null) listener.onListeningStopped();
     }
 
