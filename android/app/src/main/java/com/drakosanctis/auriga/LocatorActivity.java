@@ -359,7 +359,12 @@ public class LocatorActivity extends ComponentActivity {
         // Mic FAB tap.
         if (voiceMicFab != null) {
             voiceMicFab.setOnClickListener(v -> {
-                requestVoiceListening();
+                if (voiceEngine != null && voiceEngine.isListening()) {
+                    voiceEngine.stopListening();
+                    Toast.makeText(this, "Voice input stopped.", Toast.LENGTH_SHORT).show();
+                } else {
+                    requestVoiceListening();
+                }
             });
             // Long-press (2.5 s) activates Emergency SOS — critical
             // accessibility gap: no competitor provides this.
@@ -406,15 +411,21 @@ public class LocatorActivity extends ComponentActivity {
         return new AurigaVoiceEngine(this, new AurigaVoiceEngine.Listener() {
             @Override
             public void onListeningStarted() {
-                if (voiceMicFab != null)     voiceMicFab.setText("●");
+                if (voiceMicFab != null) {
+                    voiceMicFab.setText("STOP");
+                    voiceMicFab.setContentDescription("Stop voice input");
+                }
                 if (voiceTranscript != null) {
-                    voiceTranscript.setText("Listening…");
+                    voiceTranscript.setText("Listening now. Say a command.");
                     voiceTranscript.setVisibility(View.VISIBLE);
                 }
             }
             @Override
             public void onListeningStopped() {
-                if (voiceMicFab != null) voiceMicFab.setText("MIC");
+                if (voiceMicFab != null) {
+                    voiceMicFab.setText("MIC");
+                    voiceMicFab.setContentDescription("Start voice command. Long-press for emergency SOS.");
+                }
                 mainHandler.postDelayed(() -> {
                     if (voiceTranscript != null)
                         voiceTranscript.setVisibility(View.GONE);
