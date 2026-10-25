@@ -257,7 +257,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         });
         // Hydrate the active target set from disk so the gate starts in
         // sync with whatever the user picked in a previous session.
-        initStep("targetStore", () -> activeTargets = TargetStore.read(this));
+        initStep("targetStore", () -> activeTargets = TargetStore.readLegacy(this));
 
         // Variant styling reads calibrationManager.getState(), so must run
         // AFTER the engine-layer block above. Previously this ran before the
@@ -1691,7 +1691,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                         for (DetectedObject obj : results) {
                             if (obj == null) continue;
                             String label = primaryLabel(obj);
-                            if (TargetStore.matches(sel, label)) {
+                            if (TargetStore.matchesLegacy(sel, label)) {
                                 matched = true;
                                 matchedLabel = label == null ? "" : label;
                                 break;
