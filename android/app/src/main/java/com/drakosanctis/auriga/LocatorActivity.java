@@ -90,9 +90,8 @@ import java.util.concurrent.Executors;
  * <p>If the bundled YOLO model is missing (no {@code .tflite} in
  * {@code assets/}), {@link YoloDetector#tryCreate(Context)} returns
  * null, the camera pipeline never starts, and the user sees a
- * "model not bundled" panel with a one-tap fallback to the legacy
- * {@link LocatorWebActivity}. The detector remains unavailable rather than silently switching
- * to a web-rendered locator if the model is absent.
+ * native-only detector-unavailable panel. The Android app never switches into
+ * the browser demo if the model is absent.
  *
  * <p>The drawer wiring, mute toggles, voice/haptic preference
  * persistence, calibration-walk gate and back-key behaviour all
@@ -251,7 +250,7 @@ public class LocatorActivity extends ComponentActivity {
         if (detector == null) {
             modelMissingPanel.setVisibility(View.VISIBLE);
             overlayView.setModelReady(false);
-            overlayView.setStatus("MODEL NOT BUNDLED — TAP MENU FOR FALLBACK");
+            overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
             return;
         }
 
