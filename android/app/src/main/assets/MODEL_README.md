@@ -18,10 +18,9 @@ app/src/main/assets/yolov8n.tflite             (~6 MB, int8 quantised)
 back to `yolov8n.tflite`. Either works — it inspects the input
 tensor's data type at load time and adapts.
 
-If neither file is present the activity boots into a friendly
-"model not bundled" screen with a one-tap button that hands off to
-`LocatorWebActivity` (the legacy WebView locator), so the APK still
-ships and runs even without the model.
+If neither file is present the native activity shows a detector-unavailable
+state and disables object detection. It does not switch into the browser demo.
+The current Android CI exports and stages the required model before Gradle runs.
 
 ## How to obtain the model
 
@@ -29,11 +28,11 @@ Export directly from Ultralytics (produces the exact tensor shape
 `[1, 640, 640, 3]` → `[1, 84, 8400]` the detector expects):
 
 ```bash
-pip install ultralytics
+pip install 'numpy<2' 'ultralytics==8.4.82'
 yolo export model=yolov8n.pt format=tflite imgsz=640
 # Produces yolov8n_saved_model/yolov8n_float32.tflite
 cp yolov8n_saved_model/yolov8n_float32.tflite \
-   AURIGA/app/src/main/assets/yolov8n_float32.tflite
+   android/app/src/main/assets/yolov8n_float32.tflite
 ```
 
 For the smaller int8 variant:
@@ -41,7 +40,7 @@ For the smaller int8 variant:
 ```bash
 yolo export model=yolov8n.pt format=tflite imgsz=640 int8=True
 cp yolov8n_saved_model/yolov8n_int8.tflite \
-   AURIGA/app/src/main/assets/yolov8n.tflite
+   android/app/src/main/assets/yolov8n.tflite
 ```
 
 Any model that takes `[1, 640, 640, 3]` input and emits `[1, 84, 8400]`
@@ -99,13 +98,13 @@ To re-download manually:
 ```bash
 curl -L \
   "https://huggingface.co/litert-community/Qwen2.5-0.5B-Instruct/resolve/main/Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.tflite" \
-  -o AURIGA/app/src/main/assets/qwen2_5_0_5b_q8.bin
+  -o android/app/src/main/assets/qwen2_5_0_5b_q8.bin
 ```
 
 Verify after download:
 
 ```bash
-sha256sum AURIGA/app/src/main/assets/qwen2_5_0_5b_q8.bin
+sha256sum android/app/src/main/assets/qwen2_5_0_5b_q8.bin
 # expected: 54806eb754fe80fe6ed42d055ea56099ae0a273a52bda6437290cc00c501000b
 # size:     544,011,416 bytes
 ```
@@ -135,7 +134,7 @@ huggingface-cli download litert-community/Gemma2-2B-IT \
   --local-dir /tmp/gemma
 
 mv /tmp/gemma/Gemma2-2B-IT_multi-prefill-seq_q8_ekv1280.tflite \
-   AURIGA/app/src/main/assets/gemma2b_q4.bin
+   android/app/src/main/assets/gemma2b_q4.bin
 ```
 
 **Option B — curl with token:**
@@ -144,13 +143,13 @@ mv /tmp/gemma/Gemma2-2B-IT_multi-prefill-seq_q8_ekv1280.tflite \
 # Replace <YOUR_HF_TOKEN> with a token that has read access
 curl -L -H "Authorization: Bearer <YOUR_HF_TOKEN>" \
   "https://huggingface.co/litert-community/Gemma2-2B-IT/resolve/main/Gemma2-2B-IT_multi-prefill-seq_q8_ekv1280.tflite" \
-  -o AURIGA/app/src/main/assets/gemma2b_q4.bin
+  -o android/app/src/main/assets/gemma2b_q4.bin
 ```
 
 ### Step 3 — Verify
 
 ```bash
-sha256sum AURIGA/app/src/main/assets/gemma2b_q4.bin
+sha256sum android/app/src/main/assets/gemma2b_q4.bin
 # expected: 29ff136fd298e611296e10e9b511c86f42d1291b5b8bfc18c42178e733b679a9
 # size:     2,709,032,880 bytes
 ```
