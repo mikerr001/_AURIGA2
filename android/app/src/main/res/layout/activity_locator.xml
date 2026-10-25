@@ -1,21 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Web-replica HUD (LocatorWebActivity) wrapped in the same native
-    DrawerLayout the legacy MainActivity used, so the in-app hamburger
-    is the rich Auriga drawer (Calibration Walk, Send Feedback, Help,
-    Support, Contribute, etc.) instead of the website's PWA drawer
-    (which is hidden inside the WebView via injected CSS).
-
-    Layers:
-      • WebView fills the screen and renders the bundled
-        web_deploy/locator.html so the in-app HUD is byte-for-byte
-        the same surface as the public web preview.
-      • A TextView fallback sits above the WebView on the deep-space
-        brand background, surfaced when the page can't load.
-      • A `≡` MENU pill overlays the top-start so the user can pull
-        in the native drawer at any time, even before the WebView
-        has finished initialising.
--->
+<!-- Native CameraX object locator. The web preview is a separate browser experience. -->
 <androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/drawer_layout"
@@ -85,7 +69,6 @@
                 android:textSize="13sp"
                 android:gravity="center" />
 
-            
         </LinearLayout>
 
         <!-- Native MENU pill — overlays the camera preview in the
