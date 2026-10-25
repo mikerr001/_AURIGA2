@@ -215,12 +215,21 @@ public class LocatorActivity extends ComponentActivity {
                 }
                 return;
             }
+            if (lockedTargetLabel != null
+                    && lockedTargetLabel.equalsIgnoreCase(detection.label)
+                    && Math.abs(lockedTargetX - detection.centerX()) < 0.12f
+                    && Math.abs(lockedTargetY - detection.centerY()) < 0.12f) {
+                lockedTargetLabel = null;
+                setLocatorStatus("AUTO PICK · CENTRED MATCH");
+                Toast.makeText(this, "Focus released. Automatic target selection resumed.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             lockedTargetLabel = detection.label;
             lockedTargetX = detection.centerX();
             lockedTargetY = detection.centerY();
             setLocatorStatus("FOCUSED · " + detection.label.toUpperCase(Locale.US)
                     + " · TAP ITS BOX TO RELEASE");
-            Toast.makeText(this, "Focused on " + detection.label + ". Tap its box again to return to auto-pick.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Focused on " + detection.label + ". Tap that box again to return to auto-pick.", Toast.LENGTH_LONG).show();
         });
         taskStatus = findViewById(R.id.locator_task_status);
 
