@@ -151,7 +151,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:text="Direction is approximate. Distance and height are not measured."
+                android:text="Tap a box to focus that object; tap it again for auto-pick. Direction is approximate; distance and height are not measured."
                 android:textColor="@color/muted_label"
                 android:textSize="11sp" />
         </LinearLayout>
