@@ -114,6 +114,7 @@ public class LocatorActivity extends ComponentActivity {
 
     private boolean          smartLightEnabled = false;
     private Camera           cameraRef         = null;
+    private volatile boolean analysisBound = false;
     /**
      * Two-phase torch flag. Set to {@code true} in Phase 1 (dark scene
      * detected, torch fired). Cleared in Phase 2 (next fresh frame
@@ -526,8 +527,13 @@ public class LocatorActivity extends ComponentActivity {
             try {
                 ProcessCameraProvider provider = future.get();
                 bindCameraUseCases(provider);
-                overlayView.setModelReady(detector != null);
-                if (detector == null) {
+                overlayView.setModelReady(detector != null && analysisBound);
+                if (!analysisBound) {
+                    overlayView.setStatus("CAMERA PREVIEW ACTIVE · ANALYSIS UNAVAILABLE");
+                    Toast.makeText(this,
+                            "Camera preview is on, but live analysis could not start. Try closing other camera apps.",
+                            Toast.LENGTH_LONG).show();
+                } else if (detector == null) {
                     overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
                 } else {
                     overlayView.setStatus("CAMERA ACTIVE · DETECTOR READY");
@@ -540,27 +546,44 @@ public class LocatorActivity extends ComponentActivity {
     }
 
     private void bindCameraUseCases(ProcessCameraProvider provider) {
-        Preview preview = new Preview.Builder().build();
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-        ImageAnalysis analysis = new ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                // Force RGBA_8888 output so ImageProxy.toBitmap() returns
-                // a directly-usable ARGB bitmap. Without this, CameraX
-                // hands us YUV_420_888 and toBitmap() does an implicit
-                // chroma conversion every frame -- works, but slower
-                // and historically the source of subtle colour-channel
-                // bugs (red and blue swapped on certain Mali GPUs).
-                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                .build();
-        analysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
-
         CameraSelector selector = CameraSelector.DEFAULT_BACK_CAMERA;
         provider.unbindAll();
-        // ComponentActivity is a LifecycleOwner -- CameraX will
-        // unbind the analyser automatically when the activity is
-        // destroyed, so we don't need to do it manually here.
-        cameraRef = provider.bindToLifecycle(this, selector, preview, analysis);
+        analysisBound = false;
+        torchPrimed = false;
+
+        // Bind preview first. A failure in image analysis must never leave the
+        // user staring at a black screen when the camera itself is available.
+        Preview preview = new Preview.Builder().build();
+        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        cameraRef = provider.bindToLifecycle(this, selector, preview);
+
+        // Prefer RGBA for efficient bitmap conversion, but some camera/HAL
+        // combinations reject this output format or the combined use-case set.
+        try {
+            ImageAnalysis rgbaAnalysis = new ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                    .build();
+            rgbaAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
+            cameraRef = provider.bindToLifecycle(this, selector, preview, rgbaAnalysis);
+            analysisBound = true;
+            Log.i(TAG, "Camera preview and RGBA analysis bound.");
+        } catch (Throwable rgbaError) {
+            Log.w(TAG, "RGBA analysis unavailable; retrying default YUV analysis", rgbaError);
+            try {
+                ImageAnalysis yuvAnalysis = new ImageAnalysis.Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build();
+                yuvAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
+                cameraRef = provider.bindToLifecycle(this, selector, preview, yuvAnalysis);
+                analysisBound = true;
+                Log.i(TAG, "Camera preview and fallback YUV analysis bound.");
+            } catch (Throwable analysisError) {
+                // Keep the preview use case bound even when analysis fails.
+                Log.e(TAG, "Camera preview is available but analysis could not bind", analysisError);
+                analysisBound = false;
+            }
+        }
     }
 
     /**
