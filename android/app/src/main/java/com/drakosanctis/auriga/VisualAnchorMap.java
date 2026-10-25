@@ -23,6 +23,7 @@ public final class VisualAnchorMap {
     private static final String TAG = "VisualAnchorMap";
     private static final String PREFS = "auriga_visual_anchor_map";
     private static final String KEY_MAP = "map_v1";
+    private static final String KEY_ENABLED = "enabled";
     private static final int GRID = 8;
     private static final int MAX_ANCHORS = 120;
     private static final int MAX_HAMMING_DISTANCE = 17;
@@ -86,6 +87,7 @@ public final class VisualAnchorMap {
      * @return matched/created local anchor ID, or -1 when throttled/capacity reached.
      */
     public synchronized long observe(Bitmap frame) {
+        if (!prefs.getBoolean(KEY_ENABLED, false)) return -1L;
         if (frame == null || frame.isRecycled() || frame.getWidth() < 8 || frame.getHeight() < 8) {
             return -1L;
         }
@@ -144,6 +146,14 @@ public final class VisualAnchorMap {
 
         if (changed || now - lastPersistAt > 5000L || observations % 8 == 0) persist();
         return best.id;
+    }
+
+    public synchronized boolean isEnabled() {
+        return prefs.getBoolean(KEY_ENABLED, false);
+    }
+
+    public synchronized void setEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_ENABLED, enabled).apply();
     }
 
     public synchronized Snapshot snapshot() {
