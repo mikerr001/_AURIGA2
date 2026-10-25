@@ -565,7 +565,7 @@ public class LocatorActivity extends ComponentActivity {
                     .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                     .build();
             rgbaAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
-            cameraRef = provider.bindToLifecycle(this, selector, preview, rgbaAnalysis);
+            cameraRef = provider.bindToLifecycle(this, selector, rgbaAnalysis);
             analysisBound = true;
             Log.i(TAG, "Camera preview and RGBA analysis bound.");
         } catch (Throwable rgbaError) {
@@ -575,7 +575,7 @@ public class LocatorActivity extends ComponentActivity {
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
                 yuvAnalysis.setAnalyzer(analysisExecutor, new YoloAnalyzer());
-                cameraRef = provider.bindToLifecycle(this, selector, preview, yuvAnalysis);
+                cameraRef = provider.bindToLifecycle(this, selector, yuvAnalysis);
                 analysisBound = true;
                 Log.i(TAG, "Camera preview and fallback YUV analysis bound.");
             } catch (Throwable analysisError) {
