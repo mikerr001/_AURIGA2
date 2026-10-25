@@ -195,7 +195,7 @@ public final class TargetsActivity extends Activity {
         for (String label : TargetStore.CATEGORIES) {
             if (!query.isEmpty() && !label.contains(query)) continue;
             shown++;
-            boolean selected = selection.contains(TargetStore.CATEGORY_ANY) || selection.contains(label);
+            boolean selected = !selection.contains(TargetStore.CATEGORY_ANY) && selection.contains(label);
             LinearLayout item = row();
             item.setGravity(Gravity.CENTER_VERTICAL);
             item.setPadding(dp(14), dp(5), dp(10), dp(5));
