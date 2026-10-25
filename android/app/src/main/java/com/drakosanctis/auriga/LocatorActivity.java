@@ -59,44 +59,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Native, on-device replacement for {@link LocatorWebActivity}.
+ * Native CameraX object locator for Auriga Navi.
  *
- * <p>This is Phase 1 of the scaling strategy ("Move Target Locator
- * from WebView → native"): it runs YOLOv8n through TensorFlow Lite
- * on the device, paints bounding boxes via {@link LocatorOverlayView},
- * and announces the prominent in-frame target through Android's
- * built-in {@link TextToSpeech} engine. No JS bridge, no WebView,
- * no third-party cloud.
+ * Runs the bundled YOLOv8n TensorFlow Lite model on device, paints detections
+ * through LocatorOverlayView, and announces the object class plus relative
+ * screen direction. It does not present bounding-box-based distance or height
+ * estimates as measurements.
  *
- * <h3>Frame loop</h3>
- *
- * <ul>
- *   <li>{@link androidx.camera.core.Preview} drives the visible
- *       viewport at native preview rate.</li>
- *   <li>A separate {@link ImageAnalysis} use-case throttled to
- *       {@link #ANALYSIS_INTERVAL_MS} pulls one YUV frame at a
- *       time, converts to ARGB via {@link ImageProxy#toBitmap()},
- *       rotates to upright, and feeds it to {@link YoloDetector}.</li>
- *   <li>The activity picks the detection closest to the centre of
- *       the frame whose label is in {@link TargetStore}'s active
- *       set, then -- subject to a debounce -- speaks
- *       {{label}}, {{bearing}}, {{rough distance proxy}}.</li>
- *   <li>Box list + chosen target are pushed back to the overlay
- *       on the UI thread.</li>
- * </ul>
- *
- * <h3>Graceful degradation</h3>
- *
- * <p>If the bundled YOLO model is missing (no {@code .tflite} in
- * {@code assets/}), {@link YoloDetector#tryCreate(Context)} returns
- * null, the camera pipeline never starts, and the user sees a
- * native-only detector-unavailable panel. The Android app never switches into
- * the browser demo if the model is absent.
- *
- * <p>The drawer wiring, mute toggles, voice/haptic preference
- * persistence, calibration-walk gate and back-key behaviour all
- * mirror {@link LocatorWebActivity} so users see no functional
- * regression at the menu level.
+ * If the model is absent or cannot load, the activity shows a native
+ * detector-unavailable state. It never switches into the browser demo.
  */
 public class LocatorActivity extends ComponentActivity {
 
@@ -621,7 +592,6 @@ public class LocatorActivity extends ComponentActivity {
                 List<Detection> filtered = filterByTargets(dets);
                 Detection target = pickPrimaryTarget(filtered);
 
-                // ── SIE spatial solve for the primary target ──────
 final List<Detection> uiDets = dets;
                 final Detection uiTarget = target;
                 mainHandler.post(() -> {
