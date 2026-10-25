@@ -91,6 +91,25 @@
             android:textSize="22sp"
             android:contentDescription="Open navigation menu" />
 
+        <!-- Fast access to target selection; kept separate from the drawer. -->
+        <Button
+            android:id="@+id/locator_target_button"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="top|end"
+            android:layout_marginEnd="14dp"
+            android:layout_marginTop="14dp"
+            android:minWidth="112dp"
+            android:background="@drawable/diag_toggle_bg"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="TARGETS · ANY"
+            android:textAllCaps="false"
+            android:textColor="@color/auriga_cyan"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:contentDescription="Change the object types Auriga should locate" />
+
         <!-- Voice navigation transcript bubble — shown while listening -->
         <TextView
             android:id="@+id/voice_transcript"
