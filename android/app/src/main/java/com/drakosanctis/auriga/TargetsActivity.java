@@ -85,7 +85,9 @@ public final class TargetsActivity extends Activity {
         summary.addView(text("CURRENT TARGET", 10, Color.rgb(156,243,213), true));
         count = text("", 21, Color.WHITE, true);
         summary.addView(count, margins(-1,-2,0,4,0,3));
-        summary.addView(text("Target matching filters detections. It does not measure distance or guarantee a lock.", 12, Color.rgb(209,225,229), false));
+        TextView summaryHelp = text("This filters which detected classes are shown. The locator may prioritise the most centred visible match; it does not measure distance or guarantee a lock.", 12, Color.rgb(209,225,229), false);
+        summaryHelp.setLineSpacing(dp(2), 1f);
+        summary.addView(summaryHelp);
 
         search = new EditText(this);
         search.setSingleLine(true);
@@ -99,7 +101,24 @@ public final class TargetsActivity extends Activity {
         search.setContentDescription("Search available object types");
         page.addView(search, margins(-1,dp(54),0,18,0,0));
 
-        TextView quickTitle = text("QUICK CHOICES", 11, BRAND, true);
+        // Fast, high-frequency targets: one tap selects the exact model class.
+        TextView fastTitle = text("FIND ONE THING · FAST PICKS", 11, BRAND, true);
+        fastTitle.setLetterSpacing(.1f);
+        page.addView(fastTitle, margins(-1,-2,0,20,0,8));
+        TextView fastCopy = text("Tap a common object to select it. You can still add more below.", 12, MUTED, false);
+        page.addView(fastCopy, margins(-1,-2,0,10,0,0));
+        LinearLayout fastRowOne = row();
+        page.addView(fastRowOne, margins(-1,-2,0,0,0,8));
+        addQuickTarget(fastRowOne, "person");
+        addQuickTarget(fastRowOne, "cell phone");
+        addQuickTarget(fastRowOne, "chair");
+        LinearLayout fastRowTwo = row();
+        page.addView(fastRowTwo, margins(-1,-2,0,0,0,16));
+        addQuickTarget(fastRowTwo, "backpack");
+        addQuickTarget(fastRowTwo, "car");
+        addQuickTarget(fastRowTwo, "bottle");
+
+        TextView quickTitle = text("BROWSE BY SCENE", 11, BRAND, true);
         quickTitle.setLetterSpacing(.1f);
         page.addView(quickTitle, margins(-1,-2,0,22,0,9));
         HorizontalScrollView presetsScroll = new HorizontalScrollView(this);
@@ -143,6 +162,27 @@ public final class TargetsActivity extends Activity {
         });
         refreshSummary();
         renderResults();
+    }
+
+    private void addQuickTarget(LinearLayout parent, String label) {
+        Button b = button(titleCase(label), SURFACE, INK, BORDER);
+        b.setTextSize(12);
+        b.setMinHeight(dp(48));
+        b.setContentDescription("Select only " + titleCase(label) + " as the target");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        lp.rightMargin = dp(6);
+        parent.addView(b, lp);
+        b.setOnClickListener(v -> selectSingle(label));
+    }
+
+    private void selectSingle(String label) {
+        selection.clear();
+        selection.add(label);
+        activePreset = "";
+        TargetStore.write(this, selection);
+        refreshSummary();
+        renderResults();
+        Toast.makeText(this, titleCase(label) + " selected. Tap Start locating when ready.", Toast.LENGTH_SHORT).show();
     }
 
     private void addPreset(LinearLayout parent, String label, String key) {
