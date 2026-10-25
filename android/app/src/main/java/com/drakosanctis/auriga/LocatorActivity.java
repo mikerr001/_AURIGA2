@@ -427,6 +427,9 @@ public class LocatorActivity extends ComponentActivity {
         voiceTranscript = findViewById(R.id.voice_transcript);
         voiceMicFab     = findViewById(R.id.voice_mic_fab);
 
+        // Explicit mic activation is more reliable and private than the legacy
+        // always-on capture service, which competed with SpeechRecognizer.
+        AurigaVoiceService.stopListening(this);
         voiceEngine = buildVoiceEngine();
 
         // Serpentine gesture — detector is created here; events are fed
@@ -467,11 +470,10 @@ public class LocatorActivity extends ComponentActivity {
                     VOICE_SETUP_REQUEST);
         }
 
-        // Request RECORD_AUDIO and (on success) start the wake-word service.
+        // Ask for microphone permission, but capture audio only after the user
+        // taps MIC. Do not keep a background recorder open over other apps.
         if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            AurigaVoiceService.startListening(this);
-        } else {
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     MIC_PERMISSION_REQUEST);
@@ -566,7 +568,9 @@ public class LocatorActivity extends ComponentActivity {
         if (requestCode == MIC_PERMISSION_REQUEST) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                AurigaVoiceService.startListening(this);
+                Toast.makeText(this, "Microphone ready. Tap MIC when you want to speak.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Voice commands need microphone permission.", Toast.LENGTH_LONG).show();
             }
             return;
         }
