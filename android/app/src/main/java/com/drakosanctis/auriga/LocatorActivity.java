@@ -75,6 +75,7 @@ public class LocatorActivity extends ComponentActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 1702;
     private static final int MIC_PERMISSION_REQUEST    = 1703;
     private static final int VOICE_SETUP_REQUEST       = 1704;
+    private boolean pendingVoiceStart = false;
 
     /** Same SharedPreferences keys the WebView locator used. */
     private static final String PREF_LOCATOR_VOICE  = "locator_web_voice_enabled";
@@ -218,16 +219,13 @@ public class LocatorActivity extends ComponentActivity {
                     Toast.LENGTH_LONG).show();
         }
 
-        if (detector == null) {
-            modelMissingPanel.setVisibility(View.VISIBLE);
-            overlayView.setModelReady(false);
-            overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
-            return;
-        }
-
+        // Camera preview is independent of the detector. A missing or broken
+        // model must disable inference, not prevent the camera from opening.
         modelMissingPanel.setVisibility(View.GONE);
         overlayView.setModelReady(false);
-        overlayView.setStatus("INITIALISING CAMERA…");
+        overlayView.setStatus(detector == null
+                ? "CAMERA STARTING · DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED"
+                : "INITIALISING CAMERA…");
 
         haptic = new HapticManager(this);
         analysisExecutor = Executors.newSingleThreadExecutor();
@@ -346,7 +344,7 @@ public class LocatorActivity extends ComponentActivity {
         // via dispatchTouchEvent() at the activity level so it always sees
         // all MOVE/UP events regardless of which child view consumes them.
         serpentine = new SerpentineGestureDetector(this,
-                () -> { if (voiceEngine != null) voiceEngine.startListening(); });
+                this::requestVoiceListening);
 
         // Long-press on the locator frame as a second activation path.
         FrameLayout locatorFrame = findViewById(R.id.locator_frame);
@@ -357,7 +355,7 @@ public class LocatorActivity extends ComponentActivity {
         // Mic FAB tap.
         if (voiceMicFab != null) {
             voiceMicFab.setOnClickListener(v -> {
-                if (voiceEngine != null) voiceEngine.startListening();
+                requestVoiceListening();
             });
             // Long-press (2.5 s) activates Emergency SOS — critical
             // accessibility gap: no competitor provides this.
@@ -380,14 +378,21 @@ public class LocatorActivity extends ComponentActivity {
                     VOICE_SETUP_REQUEST);
         }
 
-        // Ask for microphone permission, but capture audio only after the user
-        // taps MIC. Do not keep a background recorder open over other apps.
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.RECORD_AUDIO},
-                    MIC_PERMISSION_REQUEST);
+        // Microphone access is requested only after the user explicitly activates
+        // voice. This avoids an unrelated permission prompt on first launch.
+    }
+
+    /** Request microphone permission only after a user action, then start one listen cycle. */
+    private void requestVoiceListening() {
+        if (voiceEngine == null) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+            voiceEngine.startListening();
+            return;
         }
+        pendingVoiceStart = true;
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST);
     }
 
     /** Build (or re-build) the AurigaVoiceEngine with a live Listener. */
@@ -473,11 +478,20 @@ public class LocatorActivity extends ComponentActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_REQUEST) {
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Microphone ready. Tap MIC when you want to speak.", Toast.LENGTH_SHORT).show();
+            boolean granted = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            boolean shouldStart = pendingVoiceStart;
+            pendingVoiceStart = false;
+            if (granted) {
+                if (shouldStart && voiceEngine != null) {
+                    voiceEngine.startListening();
+                } else {
+                    Toast.makeText(this, "Microphone ready. Tap MIC when you want to speak.",
+                            Toast.LENGTH_SHORT).show();
+                }
             } else {
-                Toast.makeText(this, "Voice commands need microphone permission.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Voice commands need microphone permission.",
+                        Toast.LENGTH_LONG).show();
             }
             return;
         }
@@ -501,8 +515,12 @@ public class LocatorActivity extends ComponentActivity {
             try {
                 ProcessCameraProvider provider = future.get();
                 bindCameraUseCases(provider);
-                overlayView.setModelReady(true);
-                overlayView.setStatus("");
+                overlayView.setModelReady(detector != null);
+                if (detector == null) {
+                    overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
+                } else {
+                    overlayView.setStatus("CAMERA ACTIVE · DETECTOR READY");
+                }
             } catch (Throwable t) {
                 Log.e(TAG, "Camera bind failed", t);
                 overlayView.setStatus("CAMERA UNAVAILABLE: " + t.getMessage());
@@ -586,6 +604,18 @@ public class LocatorActivity extends ComponentActivity {
                     torchPrimed = false;
                 }
                 if (bmp == null) return;
+
+                // Keep the live preview and relay available even if the detector
+                // asset fails to load. Never substitute fabricated detections.
+                if (detector == null) {
+                    FrameRelay.get().publishBitmap(bmp, 0);
+                    bmp.recycle();
+                    mainHandler.post(() -> {
+                        overlayView.setModelReady(false);
+                        overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
+                    });
+                    return;
+                }
 
                 List<Detection> dets = detector.detect(bmp);
 
