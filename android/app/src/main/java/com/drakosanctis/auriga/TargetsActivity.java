@@ -192,28 +192,38 @@ public final class TargetsActivity extends Activity {
         results.removeAllViews();
         String query = search == null ? "" : search.getText().toString().trim().toLowerCase(Locale.US);
         int shown = 0;
-        for (String label : TargetStore.CATEGORIES) {
-            if (!query.isEmpty() && !label.contains(query)) continue;
-            shown++;
-            boolean selected = !selection.contains(TargetStore.CATEGORY_ANY) && selection.contains(label);
-            LinearLayout item = row();
-            item.setGravity(Gravity.CENTER_VERTICAL);
-            item.setPadding(dp(14), dp(5), dp(10), dp(5));
-            item.setBackground(shape(SURFACE, 14, selected ? BRAND : BORDER));
-            item.setMinimumHeight(dp(58));
-            item.setFocusable(true);
-            item.setClickable(true);
-            TextView dot = text(selected ? "✓" : "+", 17, selected ? BRAND : MUTED, true);
-            dot.setGravity(Gravity.CENTER);
-            item.addView(dot, new LinearLayout.LayoutParams(dp(34), dp(44)));
-            TextView name = text(titleCase(label), 15, INK, selected);
-            name.setContentDescription(titleCase(label));
-            item.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
-            TextView state = text(selected ? "Selected" : "Add", 12, selected ? BRAND : MUTED, true);
-            item.addView(state);
-            item.setContentDescription(titleCase(label) + (selected ? ", selected" : ", not selected") + ". Double tap to toggle.");
-            item.setOnClickListener(v -> toggle(label));
-            results.addView(item, margins(-1,dp(58),0,0,0,7));
+        for (int groupIndex = 0; groupIndex < TargetStore.GROUPS.length; groupIndex++) {
+            String[] group = TargetStore.GROUPS[groupIndex];
+            boolean hasMatches = false;
+            for (String label : group) {
+                if (query.isEmpty() || label.contains(query)) { hasMatches = true; break; }
+            }
+            if (!hasMatches) continue;
+            TextView heading = text(TargetStore.GROUP_NAMES[groupIndex], 14, INK, true);
+            results.addView(heading, margins(-1,-2,0,12,0,7));
+            for (String label : group) {
+                if (!query.isEmpty() && !label.contains(query)) continue;
+                shown++;
+                boolean selected = !selection.contains(TargetStore.CATEGORY_ANY) && selection.contains(label);
+                LinearLayout item = row();
+                item.setGravity(Gravity.CENTER_VERTICAL);
+                item.setPadding(dp(14), dp(5), dp(10), dp(5));
+                item.setBackground(shape(SURFACE, 14, selected ? BRAND : BORDER));
+                item.setMinimumHeight(dp(58));
+                item.setFocusable(true);
+                item.setClickable(true);
+                TextView dot = text(selected ? "✓" : "+", 17, selected ? BRAND : MUTED, true);
+                dot.setGravity(Gravity.CENTER);
+                item.addView(dot, new LinearLayout.LayoutParams(dp(34), dp(44)));
+                TextView name = text(titleCase(label), 15, INK, selected);
+                name.setContentDescription(titleCase(label));
+                item.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
+                TextView state = text(selected ? "Selected" : "Add", 12, selected ? BRAND : MUTED, true);
+                item.addView(state);
+                item.setContentDescription(titleCase(label) + (selected ? ", selected" : ", not selected") + ". Double tap to toggle.");
+                item.setOnClickListener(v -> toggle(label));
+                results.addView(item, margins(-1,dp(58),0,0,0,7));
+            }
         }
         if (shown == 0) {
             TextView empty = text("No object types match “" + query + "”. Try a shorter search.", 14, MUTED, false);
