@@ -5,8 +5,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Bundle;
 import android.os.Build;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -17,177 +17,170 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * Native Auriga home screen. This is deliberately independent of the web demo:
- * all navigation here launches Android activities and never embeds a WebView.
+ * Native-first AurigaNavi dashboard.
+ *
+ * This is an application home screen, not a web landing page. It contains no
+ * WebView and every action opens a native Android activity.
  */
 public final class AurigaHomeActivity extends Activity {
-    private final int ink = Color.rgb(22, 39, 51);
-    private final int muted = Color.rgb(91, 109, 121);
-    private final int brand = Color.rgb(8, 127, 140);
-    private final int border = Color.rgb(222, 230, 235);
+    private static final int BG = Color.rgb(244, 247, 249);
+    private static final int SURFACE = Color.WHITE;
+    private static final int INK = Color.rgb(20, 39, 49);
+    private static final int MUTED = Color.rgb(88, 108, 119);
+    private static final int BRAND = Color.rgb(0, 112, 126);
+    private static final int BRAND_PALE = Color.rgb(222, 244, 244);
+    private static final int BORDER = Color.rgb(219, 229, 233);
     private LinearLayout content;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Window window = getWindow();
-        window.setStatusBarColor(Color.rgb(246, 248, 251));
-        window.setNavigationBarColor(Color.rgb(246, 248, 251));
-        int systemUiFlags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        window.setStatusBarColor(BG);
+        window.setNavigationBarColor(BG);
+        int flags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            systemUiFlags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         }
-        window.getDecorView().setSystemUiVisibility(systemUiFlags);
+        window.getDecorView().setSystemUiVisibility(flags);
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Color.rgb(246, 248, 251));
-        content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(22), dp(18), dp(22), dp(30));
+        scroll.setBackgroundColor(BG);
+        scroll.setClipToPadding(false);
+        content = column();
+        content.setPadding(dp(20), dp(16), dp(20), dp(26));
         scroll.addView(content);
         setContentView(scroll);
-        buildHome();
+        buildDashboard();
     }
 
-    private void buildHome() {
-        LinearLayout header = row();
-        TextView mark = text("A", 22, Color.WHITE, true);
+    private void buildDashboard() {
+        // Compact app bar: identity and a real device-status destination.
+        LinearLayout appBar = row();
+        appBar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView mark = text("A", 21, Color.WHITE, true);
         mark.setGravity(Gravity.CENTER);
-        mark.setBackground(shape(Color.rgb(17, 43, 57), 15, Color.TRANSPARENT));
-        header.addView(mark, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        mark.setBackground(shape(INK, 14, Color.TRANSPARENT));
+        appBar.addView(mark, new LinearLayout.LayoutParams(dp(46), dp(46)));
 
-        LinearLayout brandText = column();
-        TextView title = text("Auriga", 21, ink, true);
-        TextView subtitle = text("BY DRAKOSANCTIS", 10, muted, true);
-        subtitle.setLetterSpacing(.12f);
-        brandText.addView(title);
-        brandText.addView(subtitle);
-        LinearLayout.LayoutParams brandParams = new LinearLayout.LayoutParams(0, -2, 1f);
-        brandParams.leftMargin = dp(12);
-        header.addView(brandText, brandParams);
+        LinearLayout titleStack = column();
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1f);
+        titleParams.leftMargin = dp(12);
+        appBar.addView(titleStack, titleParams);
+        titleStack.addView(text("AurigaNavi", 19, INK, true));
+        TextView sub = text("SPATIAL COPILOT", 9, MUTED, true);
+        sub.setLetterSpacing(.14f);
+        titleStack.addView(sub);
 
-        TextView status = text("PREVIEW", 10, brand, true);
-        status.setLetterSpacing(.08f);
-        status.setGravity(Gravity.CENTER);
-        status.setPadding(dp(12), dp(8), dp(12), dp(8));
-        status.setBackground(shape(Color.rgb(224, 244, 243), 50, Color.TRANSPARENT));
-        header.addView(status);
-        content.addView(header);
+        Button statusButton = button("Device status", SURFACE, BRAND, BORDER);
+        statusButton.setTextSize(11);
+        appBar.addView(statusButton, new LinearLayout.LayoutParams(-2, dp(42)));
+        statusButton.setOnClickListener(v -> open(ModelStatusActivity.class));
+        content.addView(appBar);
 
-        TextView eyebrow = text("YOUR ON-DEVICE COPILOT", 11, brand, true);
-        eyebrow.setLetterSpacing(.12f);
-        LinearLayout.LayoutParams eyebrowParams = params(-2, -2, 0, 0, 0, 0);
-        eyebrowParams.topMargin = dp(32);
-        content.addView(eyebrow, eyebrowParams);
+        // Functional heading replaces the promotional website-style hero.
+        TextView greeting = text("What do you need?", 28, INK, true);
+        content.addView(greeting, margins(-1, -2, 0, 28, 0, 4));
+        TextView intro = text("Choose one task. Auriga opens a focused native tool.", 14, MUTED, false);
+        content.addView(intro);
 
-        TextView headline = text("A little more context.\nA little more independence.", 32, ink, true);
-        headline.setLineSpacing(dp(2), 1f);
-        LinearLayout.LayoutParams headlineParams = params(-1, -2, 0, 10, 0, 0);
-        content.addView(headline, headlineParams);
+        // One primary action, visually dominant and easy to hit.
+        LinearLayout scanCard = column();
+        scanCard.setPadding(dp(20), dp(20), dp(20), dp(20));
+        scanCard.setBackground(shape(INK, 24, Color.TRANSPARENT));
+        content.addView(scanCard, margins(-1, -2, 0, 22, 0, 0));
 
-        TextView intro = text("Choose a tool for the task in front of you. The Android app stays native; the browser demo lives separately.", 15, muted, false);
-        intro.setLineSpacing(dp(4), 1f);
-        LinearLayout.LayoutParams introParams = params(-1, -2, 0, 8, 0, 0);
-        content.addView(intro, introParams);
+        LinearLayout scanTop = row();
+        scanTop.setGravity(Gravity.CENTER_VERTICAL);
+        TextView live = text("LIVE CAMERA", 10, Color.rgb(156, 243, 213), true);
+        live.setLetterSpacing(.15f);
+        scanTop.addView(live, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView nativeTag = text("NATIVE", 9, Color.rgb(204, 224, 229), true);
+        nativeTag.setPadding(dp(9), dp(5), dp(9), dp(5));
+        nativeTag.setBackground(shape(Color.rgb(37, 64, 75), 50, Color.TRANSPARENT));
+        scanTop.addView(nativeTag);
+        scanCard.addView(scanTop);
 
-        LinearLayout hero = column();
-        hero.setPadding(dp(22), dp(22), dp(22), dp(22));
-        hero.setBackground(shape(Color.rgb(17, 43, 57), 24, Color.TRANSPARENT));
-        LinearLayout.LayoutParams heroParams = params(-1, -2, 0, 24, 0, 0);
-        content.addView(hero, heroParams);
+        TextView scanTitle = text("Start a live scan", 24, Color.WHITE, true);
+        scanCard.addView(scanTitle, margins(-1, -2, 0, 14, 0, 4));
+        TextView scanCopy = text("Point the rear camera at your surroundings. Object detection is enabled only when the on-device model is ready.", 13, Color.rgb(202, 220, 225), false);
+        scanCopy.setLineSpacing(dp(3), 1f);
+        scanCard.addView(scanCopy);
 
-        TextView heroLabel = text("LIVE CAMERA", 10, Color.rgb(130, 226, 224), true);
-        heroLabel.setLetterSpacing(.14f);
-        hero.addView(heroLabel);
-        TextView heroTitle = text("Understand what’s around you.", 23, Color.WHITE, true);
-        LinearLayout.LayoutParams heroTitleParams = params(-1, -2, 0, 10, 0, 0);
-        hero.addView(heroTitle, heroTitleParams);
-        TextView heroCopy = text("Open the native camera view for on-device object detection and spoken cues. Detection availability is shown honestly if a model cannot load.", 14, Color.rgb(207, 223, 229), false);
-        heroCopy.setLineSpacing(dp(3), 1f);
-        LinearLayout.LayoutParams heroCopyParams = params(-1, -2, 0, 8, 0, 0);
-        hero.addView(heroCopy, heroCopyParams);
-        Button start = button("Start live scan  →", brand, Color.WHITE);
-        LinearLayout.LayoutParams startParams = params(-1, dp(52), 0, 18, 0, 0);
-        hero.addView(start, startParams);
+        Button start = button("Open camera  →", Color.rgb(156, 243, 213), INK, Color.TRANSPARENT);
+        scanCard.addView(start, margins(-1, dp(52), 0, 18, 0, 0));
         start.setOnClickListener(v -> open(LocatorActivity.class));
 
-        TextView toolsTitle = text("Your tools", 22, ink, true);
-        LinearLayout.LayoutParams toolsTitleParams = params(-1, -2, 0, 10, 0, 0);
-        content.addView(toolsTitle, toolsTitleParams);
-        TextView toolsCopy = text("Focused tools, one clear purpose each.", 14, muted, false);
-        content.addView(toolsCopy);
+        TextView toolsHeading = text("Quick tools", 20, INK, true);
+        content.addView(toolsHeading, margins(-1, -2, 0, 26, 0, 5));
+        TextView toolsSub = text("Open only what you need.", 13, MUTED, false);
+        content.addView(toolsSub);
 
-        LinearLayout rowOne = row();
-        LinearLayout.LayoutParams rowParams = params(-1, -2, 0, 16, 0, 0);
-        content.addView(rowOne, rowParams);
-        rowOne.addView(module("Read text", "Signs, labels and printed pages", "Aa", () -> open(ReaderActivity.class)), weighted());
-        rowOne.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
-        rowOne.addView(module("Identify colour", "Name the colour in view", "◉", () -> open(ColorSenseActivity.class)), weighted());
+        LinearLayout firstRow = row();
+        content.addView(firstRow, margins(-1, -2, 0, 15, 0, 0));
+        firstRow.addView(toolCard("Read text", "Pages, signs and labels", "Aa",
+                () -> open(ReaderActivity.class)), weighted());
+        firstRow.addView(gap(12), new LinearLayout.LayoutParams(dp(12), 1));
+        firstRow.addView(toolCard("Identify colour", "Name a colour in view", "◉",
+                () -> open(ColorSenseActivity.class)), weighted());
 
-        LinearLayout rowTwo = row();
-        content.addView(rowTwo, params(-1, -2, 0, 12, 0, 0));
-        rowTwo.addView(module("Object targets", "Choose what to track", "⌖", () -> open(TargetsActivity.class)), weighted());
-        rowTwo.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
-        rowTwo.addView(module("Calibration", "Improve measurements", "↗", () -> open(CalibrationWalkActivity.class)), weighted());
+        LinearLayout secondRow = row();
+        content.addView(secondRow, margins(-1, -2, 0, 12, 0, 0));
+        secondRow.addView(toolCard("Object targets", "Choose what to track", "⌖",
+                () -> open(TargetsActivity.class)), weighted());
+        secondRow.addView(gap(12), new LinearLayout.LayoutParams(dp(12), 1));
+        secondRow.addView(toolCard("Camera devices", "Connect supported hardware", "⌁",
+                () -> open(CameraConnectActivity.class)), weighted());
 
-        LinearLayout rowThree = row();
-        content.addView(rowThree, params(-1, -2, 0, 12, 0, 0));
-        rowThree.addView(module("Connect a camera", "USB, Wi-Fi and supported devices", "⌁", () -> open(CameraConnectActivity.class)), weighted());
-        rowThree.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
-        rowThree.addView(module("Model status", "Check local AI availability", "▦", () -> open(ModelStatusActivity.class)), weighted());
+        LinearLayout thirdRow = row();
+        content.addView(thirdRow, margins(-1, -2, 0, 12, 0, 0));
+        thirdRow.addView(toolCard("Model status", "Check on-device AI", "▦",
+                () -> open(ModelStatusActivity.class)), weighted());
+        thirdRow.addView(gap(12), new LinearLayout.LayoutParams(dp(12), 1));
+        thirdRow.addView(toolCard("Help & controls", "Learn how to use Auriga", "i",
+                () -> open(HelpActivity.class)), weighted());
 
-        LinearLayout voice = row();
-        voice.setGravity(Gravity.CENTER_VERTICAL);
-        voice.setPadding(dp(16), dp(14), dp(16), dp(14));
-        voice.setBackground(shape(Color.WHITE, 18, border));
-        LinearLayout.LayoutParams voiceParams = params(-1, -2, 0, 18, 0, 0);
-        content.addView(voice, voiceParams);
-        TextView voiceIcon = text("◖", 24, brand, true);
-        voice.addView(voiceIcon);
-        LinearLayout voiceWords = column();
-        LinearLayout.LayoutParams voiceWordsParams = new LinearLayout.LayoutParams(0, -2, 1f);
-        voiceWordsParams.leftMargin = dp(12);
-        voice.addView(voiceWords, voiceWordsParams);
-        voiceWords.addView(text("Voice copilot", 15, ink, true));
-        voiceWords.addView(text("Open the live screen and use its microphone control.", 12, muted, false));
-        TextView voiceArrow = text("→", 21, brand, true);
-        voice.addView(voiceArrow);
-        voice.setFocusable(true);
-        voice.setClickable(true);
-        voice.setContentDescription("Open the live camera screen to use voice copilot");
-        voice.setOnClickListener(v -> open(LocatorActivity.class));
-
-        TextView safety = text("EXPERIMENTAL BUILD  ·  NOT A CERTIFIED MOBILITY AID\nDo not rely on Auriga for collision avoidance or safety-critical distance estimates. A successful install does not mean the sensing system has been validated.", 12, Color.rgb(105, 75, 19), false);
+        // Honest, persistent safety state—not a marketing badge.
+        LinearLayout safety = column();
         safety.setPadding(dp(15), dp(14), dp(15), dp(14));
-        safety.setBackground(shape(Color.rgb(255, 244, 216), 15, Color.rgb(239, 216, 157)));
-        safety.setLineSpacing(dp(3), 1f);
-        content.addView(safety, params(-1, -2, 0, 22, 0, 0));
+        safety.setBackground(shape(Color.rgb(255, 246, 224), 16, Color.rgb(239, 220, 170)));
+        content.addView(safety, margins(-1, -2, 0, 22, 0, 0));
+        safety.addView(text("EXPERIMENTAL BUILD", 10, Color.rgb(111, 76, 14), true));
+        TextView warning = text("Not a certified mobility aid. Do not rely on Auriga for collision avoidance or safety-critical distance estimates.", 12, Color.rgb(91, 70, 35), false);
+        warning.setLineSpacing(dp(2), 1f);
+        safety.addView(warning, margins(-1, -2, 0, 5, 0, 0));
 
-        TextView footer = text("Privacy-first direction · Clear status · User in control", 11, muted, false);
-        footer.setGravity(Gravity.CENTER);
-        content.addView(footer, params(-1, -2, 0, 20, 0, 0));
+        LinearLayout footer = row();
+        footer.setGravity(Gravity.CENTER_VERTICAL);
+        TextView footerText = text("Privacy-first direction · User in control", 11, MUTED, false);
+        footer.addView(footerText, new LinearLayout.LayoutParams(0, -2, 1f));
+        Button help = button("Support", BG, BRAND, BORDER);
+        help.setTextSize(11);
+        footer.addView(help, new LinearLayout.LayoutParams(-2, dp(40)));
+        help.setOnClickListener(v -> open(SupportActivity.class));
+        content.addView(footer, margins(-1, -2, 0, 20, 0, 0));
     }
 
-    private LinearLayout module(String name, String description, String glyph, Runnable action) {
+    private LinearLayout toolCard(String title, String description, String glyph, Runnable action) {
         LinearLayout card = column();
-        card.setPadding(dp(15), dp(16), dp(15), dp(16));
-        card.setBackground(shape(Color.WHITE, 18, border));
-        card.setMinimumHeight(dp(145));
-        TextView icon = text(glyph, 22, brand, true);
+        card.setPadding(dp(14), dp(15), dp(14), dp(16));
+        card.setMinimumHeight(dp(142));
+        card.setBackground(shape(SURFACE, 18, BORDER));
+
+        TextView icon = text(glyph, 21, BRAND, true);
         icon.setGravity(Gravity.CENTER);
-        icon.setBackground(shape(Color.rgb(224, 244, 243), 13, Color.TRANSPARENT));
+        icon.setBackground(shape(BRAND_PALE, 13, Color.TRANSPARENT));
         card.addView(icon, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        TextView title = text(name, 14, ink, true);
-        LinearLayout.LayoutParams titleParams = params(-1, -2, 0, 12, 0, 0);
-        card.addView(title, titleParams);
-        TextView copy = text(description, 12, muted, false);
+
+        card.addView(text(title, 14, INK, true), margins(-1, -2, 0, 12, 0, 4));
+        TextView copy = text(description, 11, MUTED, false);
         copy.setLineSpacing(dp(2), 1f);
         card.addView(copy);
         card.setFocusable(true);
         card.setClickable(true);
-        card.setContentDescription(name + ". " + description);
+        card.setContentDescription(title + ". " + description);
         card.setOnClickListener(v -> action.run());
         return card;
     }
@@ -196,67 +189,68 @@ public final class AurigaHomeActivity extends Activity {
         try {
             startActivity(new Intent(this, destination));
         } catch (Throwable t) {
-            android.widget.Toast.makeText(this, "This tool could not be opened.", android.widget.Toast.LENGTH_LONG).show();
+            android.widget.Toast.makeText(this, "That tool could not be opened.", android.widget.Toast.LENGTH_LONG).show();
         }
     }
 
     private LinearLayout row() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.HORIZONTAL);
-        return layout;
+        LinearLayout v = new LinearLayout(this);
+        v.setOrientation(LinearLayout.HORIZONTAL);
+        return v;
     }
 
     private LinearLayout column() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        return layout;
+        LinearLayout v = new LinearLayout(this);
+        v.setOrientation(LinearLayout.VERTICAL);
+        return v;
     }
 
-    private TextView text(String value, int sp, int color, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(sp);
-        view.setTextColor(color);
-        view.setTypeface(Typeface.DEFAULT, bold ? Typeface.BOLD : Typeface.NORMAL);
-        view.setGravity(Gravity.CENTER_VERTICAL);
-        return view;
+    private TextView text(String value, int size, int color, boolean bold) {
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextSize(size);
+        v.setTextColor(color);
+        v.setTypeface(Typeface.DEFAULT, bold ? Typeface.BOLD : Typeface.NORMAL);
+        v.setGravity(Gravity.CENTER_VERTICAL);
+        return v;
     }
 
-    private Button button(String label, int background, int foreground) {
-        Button view = new Button(this);
-        view.setText(label);
-        view.setTextSize(15);
-        view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        view.setTextColor(foreground);
-        view.setAllCaps(false);
-        view.setMinHeight(dp(48));
-        view.setBackground(shape(background, 15, Color.TRANSPARENT));
-        view.setContentDescription(label);
-        return view;
+    private Button button(String label, int fill, int foreground, int stroke) {
+        Button v = new Button(this);
+        v.setText(label);
+        v.setTextSize(14);
+        v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        v.setTextColor(foreground);
+        v.setAllCaps(false);
+        v.setMinHeight(dp(44));
+        v.setPadding(dp(12), 0, dp(12), 0);
+        v.setBackground(shape(fill, 14, stroke));
+        v.setContentDescription(label);
+        return v;
     }
 
     private GradientDrawable shape(int fill, int radiusDp, int stroke) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(fill);
-        drawable.setCornerRadius(dp(radiusDp));
-        if (stroke != Color.TRANSPARENT) drawable.setStroke(dp(1), stroke);
-        return drawable;
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(fill);
+        d.setCornerRadius(dp(radiusDp));
+        if (stroke != Color.TRANSPARENT) d.setStroke(dp(1), stroke);
+        return d;
     }
 
     private LinearLayout.LayoutParams weighted() {
         return new LinearLayout.LayoutParams(0, -2, 1f);
     }
 
-    private View spacer(int widthDp) {
-        View view = new View(this);
-        view.setLayoutParams(new LinearLayout.LayoutParams(dp(widthDp), 1));
-        return view;
+    private View gap(int widthDp) {
+        View v = new View(this);
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(widthDp), 1));
+        return v;
     }
 
-    private LinearLayout.LayoutParams params(int width, int height, int left, int top, int right, int bottom) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(width, height);
-        lp.setMargins(dp(left), dp(top), dp(right), dp(bottom));
-        return lp;
+    private LinearLayout.LayoutParams margins(int width, int height, int left, int top, int right, int bottom) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(width, height);
+        p.setMargins(dp(left), dp(top), dp(right), dp(bottom));
+        return p;
     }
 
     private int dp(int value) {
