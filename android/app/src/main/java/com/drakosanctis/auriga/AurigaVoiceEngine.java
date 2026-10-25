@@ -74,7 +74,8 @@ public class AurigaVoiceEngine implements RecognitionListener {
     private SpeechRecognizer recognizer;
     private TextToSpeech tts;
     private boolean ttsReady  = false;
-    private boolean listening  = false;
+    private volatile boolean listening = false;
+    private volatile boolean paused = false;
 
     /* OpenClaw-style skill engine: handles all non-navigation commands */
     private AurigaSkillEngine skillEngine;
