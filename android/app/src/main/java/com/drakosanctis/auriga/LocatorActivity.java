@@ -130,21 +130,6 @@ public class LocatorActivity extends ComponentActivity {
     private static final long SPEECH_COOLDOWN_MS = 2200L;
 
     // ── Distance / bearing constants ────────────────────────────────────
-    /**
-     * Horizontal field of view assumed for the rear camera.
-     * Matches the web PWA (locator.html FOV_DEGREES = 60).
-     * Bearing (°) = (normCentreX − 0.5) × FOV_DEGREES.
-     * Positive → right of centre; negative → left.
-     */
-    private static final float FOV_DEGREES = 60f;
-
-    /**
-     * Empirical constant used by the web PWA distance formula:
-     *   distance_m = REFERENCE_CONSTANT / (normHeight × 100)
-     * Larger bounding-box height → object is closer.
-     * Matches locator.html REFERENCE_CONSTANT = 100.
-     */
-    private static final float REFERENCE_CONSTANT = 100f;
 
     private DrawerLayout drawerLayout;
     private PreviewView previewView;
@@ -198,7 +183,6 @@ public class LocatorActivity extends ComponentActivity {
     private volatile List<Detection> recentDetections = Collections.emptyList();
 
     /** Parking-sensor style distance earcons — non-verbal proximity feedback. */
-    private ProximityEarconManager earconManager;
 
     /** Light sensor — warns user when scene is too dark for accurate detection. */
     private SensorManager sensorManager;
@@ -337,9 +321,6 @@ public class LocatorActivity extends ComponentActivity {
         // "different process than original client").
         FrameRelay.get().markSourceActive();
 
-        // Proximity earcon — init on first resume, no-op thereafter.
-        if (earconManager == null) earconManager = new ProximityEarconManager();
-
         // Light-level sensor — gentle "low light" advisory spoken at most once/min.
         if (sensorManager == null) {
             sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -357,7 +338,6 @@ public class LocatorActivity extends ComponentActivity {
         super.onPause();
         if (voiceEngine != null) voiceEngine.onPause();
         FrameRelay.get().markSourceInactive(); // stop pushing frames to service engines
-        if (earconManager != null) earconManager.silence();
         if (sensorManager != null) {
             try { sensorManager.unregisterListener(lightListener); } catch (Throwable ignored) {}
         }
@@ -383,10 +363,6 @@ public class LocatorActivity extends ComponentActivity {
         }
         if (lockOnBeep != null) {
             try { lockOnBeep.release(); } catch (Throwable ignored) {}
-        }
-        if (earconManager != null) {
-            try { earconManager.release(); } catch (Throwable ignored) {}
-            earconManager = null;
         }
         if (sensorManager != null) {
             try { sensorManager.unregisterListener(lightListener); } catch (Throwable ignored) {}
@@ -529,10 +505,7 @@ public class LocatorActivity extends ComponentActivity {
                 int n = Math.min(dets.size(), 5);
                 for (int i = 0; i < n; i++) {
                     Detection d = dets.get(i);
-                    float bear = bearingDeg(d.centerX());
-                    String dir = bear < -20f ? "to your left"
-                               : bear >  20f ? "to your right"
-                               : "straight ahead";
+                    String dir = directionWord(d.centerX());
                     if (i > 0 && i == n - 1) sb.append(", and ");
                     else if (i > 0) sb.append(", ");
                     sb.append("a ").append(d.label).append(" ").append(dir);
@@ -710,26 +683,14 @@ public class LocatorActivity extends ComponentActivity {
                 Detection target = pickPrimaryTarget(filtered);
 
                 // ── SIE spatial solve for the primary target ──────
-                final TriangulationEngine.SpatialOutput spatialOut =
-                        (target != null && triangulation != null)
-                                ? computeSpatialOutput(target, fW, fH)
-                                : null;
-
-                final List<Detection> uiDets = dets;
+final List<Detection> uiDets = dets;
                 final Detection uiTarget = target;
                 mainHandler.post(() -> {
                     recentDetections = uiDets; // snapshot for "describe surroundings" command
-                    if (earconManager != null) {
-                        if (uiTarget != null) {
-                            earconManager.update(distanceM(uiTarget));
-                        } else {
-                            earconManager.silence();
-                        }
-                    }
-                    overlayView.setDetections(uiDets, uiTarget);
+overlayView.setDetections(uiDets, uiTarget);
                     if (uiTarget != null) {
-                        overlayView.setStatus(buildStatusLine(uiTarget, spatialOut, fH));
-                        announceTarget(uiTarget, spatialOut, fH);
+                        overlayView.setStatus(buildStatusLine(uiTarget));
+                        announceTarget(uiTarget);
                     } else if (uiDets.isEmpty()) {
                         overlayView.setStatus("NO TARGETS IN VIEW");
                     } else {
@@ -885,187 +846,45 @@ public class LocatorActivity extends ComponentActivity {
         }
     }
 
-    /**
-     * Estimated height of the object's centre above the floor (metres).
-     * For ground objects the engine returns heightM=0 (it only knows the
-     * base distance), so we compute real height from the bbox vertical
-     * extent and return half of it as the centre height. For overhangs
-     * the engine's heightM is the hang height above floor — use directly.
-     */
-    private float objectCentreHeightM(Detection d,
-                                       TriangulationEngine.SpatialOutput out,
-                                       int fH) {
-        if (out == null) return 0f;
-        if ("OVERHANG".equals(out.signature) && out.heightM > 0f) {
-            return out.heightM;
-        }
-        float focalPx = (hal != null) ? hal.getFocalLengthPx(lastFrameWidth) : 0f;
-        if (focalPx <= 0f || out.distanceM <= 0f) return 0f;
-        float bboxPx = (d.box.bottom - d.box.top) * fH;
-        float realH  = (bboxPx / focalPx) * out.distanceM;
-        return realH / 2.0f;
-    }
-
-    // ─── HUD status line ──────────────────────────────────────────
+    // ─── Native HUD status and speech ─────────────────────────────
 
     /**
-     * Status line: LABEL · Xm · CLOCK · HEIGHT · CONF%
-     *
-     * Uses SpatialOutput when the LUT is calibrated; falls back to
-     * the legacy formula so the overlay always shows something useful.
+     * Reports only object class, relative screen direction and model confidence.
+     * Metric distance and height remain suppressed until a validated scale and
+     * ground-plane solution are available.
      */
-    private String buildStatusLine(Detection d,
-                                    TriangulationEngine.SpatialOutput out,
-                                    int fH) {
-        float dist    = resolveDistance(d, out);
-        float bearing = (out != null) ? out.bearingDeg : bearingDeg(d.centerX());
-        float centH   = objectCentreHeightM(d, out, fH);
-        String clock  = clockPosition(bearing);
-        String hDesc  = heightDescription(centH, out);
-        String status = d.label.toUpperCase(Locale.US)
-                + " · " + distStr(dist)
-                + " · " + clock
-                + (hDesc.isEmpty() ? "" : " · " + hDesc)
+    private String buildStatusLine(Detection d) {
+        return d.label.toUpperCase(Locale.US)
+                + " · " + directionWord(d.centerX()).toUpperCase(Locale.US)
                 + " · " + Math.round(d.confidence * 100) + "%";
-        if (dracoAID != null && !dracoAID.isCalibrated()) {
-            status += " [calibrating…]";
+    }
+
+    private static String directionWord(float normX) {
+        if (normX < 0.40f) return "to your left";
+        if (normX > 0.60f) return "to your right";
+        return "ahead";
+    }
+
+    private void announceTarget(Detection d) {
+        String direction = directionWord(d.centerX());
+        boolean centred = "ahead".equals(direction);
+        if (hapticEnabled && haptic != null && centred) {
+            try { haptic.alert(); } catch (Throwable ignored) {}
         }
-        return status;
-    }
-
-    // ─── Bearing helpers ──────────────────────────────────────────
-
-    private static float bearingDeg(float normX) {
-        return (normX - 0.5f) * FOV_DEGREES;
-    }
-
-    /**
-     * Clock-face bearing for TTS.
-     *   12 o'clock = dead ahead (±5°)
-     *   11 / 1     = slightly off (5°–17°)
-     *   10 / 2     = noticeably off (≥17°) within normal camera FOV
-     */
-    private static String clockPosition(float deg) {
-        float ab = Math.abs(deg);
-        if (ab < 5f)  return "12 o'clock";
-        if (deg < 0f) return ab < 17f ? "11 o'clock" : "10 o'clock";
-        else          return ab < 17f ? "1 o'clock"  : "2 o'clock";
-    }
-
-    /**
-     * Height zone description for TTS.
-     * Mapped to the ergonomic zones a standing person would feel:
-     *   floor / ankle / knee / waist / chest / head / overhead.
-     * Returns empty string for zero / unknown height.
-     */
-    private static String heightDescription(float hM,
-                                             TriangulationEngine.SpatialOutput out) {
-        if (out != null && "OVERHANG".equals(out.signature)) {
-            return hM > 2.10f ? "overhead" : "head height";
+        if (centred && lockOnBeep != null) {
+            try { lockOnBeep.startTone(ToneGenerator.TONE_PROP_BEEP2, 120); }
+            catch (Throwable ignored) {}
         }
-        if (hM <= 0.05f) return "";
-        if (hM < 0.30f)  return "floor level";
-        if (hM < 0.60f)  return "ankle height";
-        if (hM < 0.95f)  return "knee height";
-        if (hM < 1.25f)  return "waist height";
-        if (hM < 1.58f)  return "chest height";
-        if (hM < 1.90f)  return "head height";
-        return "overhead";
-    }
-
-    /** Distance from SpatialOutput when valid, else legacy formula. */
-    private static float resolveDistance(Detection d,
-                                          TriangulationEngine.SpatialOutput out) {
-        if (out != null && out.distanceM > 0f && out.distanceM < 50f) {
-            return out.distanceM;
-        }
-        float normH = Math.max(d.box.bottom - d.box.top, 0.001f);
-        return REFERENCE_CONSTANT / (normH * 100f);
-    }
-
-    /** Compact human-readable distance string used in both HUD and TTS. */
-    private static String distStr(float dist) {
-        if (dist < 1f) {
-            return Math.round(dist * 100) + " centimetres";
-        }
-        long whole = Math.round(dist);
-        if (whole >= 2 && Math.abs(dist - whole) <= 0.05f) {
-            return whole + " metres";
-        }
-        return String.format(Locale.US, "%.1f metres", dist);
-    }
-
-    // ─── Legacy statics kept for fallback ─────────────────────────
-
-    private static float distanceM(Detection d) {
-        float normH = Math.max(d.box.bottom - d.box.top, 0.001f);
-        return REFERENCE_CONSTANT / (normH * 100f);
-    }
-
-    private static String distanceStr(Detection d) {
-        return distStr(distanceM(d));
-    }
-
-    // ─── Announce (TTS + haptic + lock-on beep) ───────────────────
-
-    /**
-     * Announce the primary target.
-     *
-     * TTS format: "{Label}, {distance}, {clock position}, {height}."
-     *   e.g. "Chair, 2 metres, 10 o'clock, waist height."
-     *
-     * When the camera is locked on (|bearing| < 5°) a short confirmation
-     * beep fires in addition to the double haptic pulse, giving a clear
-     * multi-sensory "found it" signal even in noisy environments.
-     */
-    private void announceTarget(Detection d,
-                                  TriangulationEngine.SpatialOutput out,
-                                  int fH) {
-        float bearing = (out != null) ? out.bearingDeg : bearingDeg(d.centerX());
-        float absDeg  = Math.abs(bearing);
-        float dist    = resolveDistance(d, out);
-
-        // ── Haptic (always runs, ignores voice-mute) ──────────────
-        if (hapticEnabled && haptic != null) {
-            try {
-                if (absDeg < 5f) {
-                    haptic.alert();
-                } else if (absDeg < 15f) {
-                    haptic.pulse(dist);
-                }
-            } catch (Throwable ignored) {}
-        }
-
-        // ── Lock-on beep (audio, independent of TTS cooldown) ─────
-        // Fires a short double-beep the moment the camera centres on
-        // the target so the user knows they are aimed correctly without
-        // having to wait for the next TTS utterance.
-        if (absDeg < 5f && lockOnBeep != null) {
-            try {
-                lockOnBeep.startTone(ToneGenerator.TONE_PROP_BEEP2, 120);
-            } catch (Throwable ignored) {}
-        }
-
         if (!voiceEnabled || !ttsReady || tts == null) return;
-
         long now = SystemClock.uptimeMillis();
         boolean sameAsLast = d.label.equalsIgnoreCase(lastSpokenLabel);
         if (sameAsLast && now - lastSpokenAt < SPEECH_COOLDOWN_MS) return;
         if (!sameAsLast && now - lastSpokenAt < 700L) return;
-
-        float  centH  = objectCentreHeightM(d, out, fH);
-        String clock  = clockPosition(bearing);
-        String hDesc  = heightDescription(centH, out);
-        String label  = d.label.substring(0, 1).toUpperCase(Locale.US)
-                      + d.label.substring(1).toLowerCase(Locale.US);
-
-        String utterance = label + ", " + distStr(dist) + ", " + clock;
-        if (!hDesc.isEmpty()) utterance += ", " + hDesc;
-        utterance += ".";
-
-        tts.speak(utterance, TextToSpeech.QUEUE_FLUSH, null,
+        String label = d.label.substring(0, 1).toUpperCase(Locale.US)
+                + d.label.substring(1).toLowerCase(Locale.US);
+        tts.speak(label + ", " + direction + ".", TextToSpeech.QUEUE_FLUSH, null,
                 "auriga_locator_" + now);
-        lastSpokenAt    = now;
+        lastSpokenAt = now;
         lastSpokenLabel = d.label;
     }
 
