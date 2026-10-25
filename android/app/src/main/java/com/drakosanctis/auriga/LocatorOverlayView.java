@@ -164,10 +164,10 @@ public final class LocatorOverlayView extends View {
         }
 
         // ── Status strip ──
-        if (!modelReady) {
+        if (!statusLine.isEmpty()) {
+            drawStatus(canvas, statusLine, modelReady ? CYAN : AMBER);
+        } else if (!modelReady) {
             drawStatus(canvas, "MODEL LOADING — POINT CAMERA AT WORKSPACE", AMBER);
-        } else if (!statusLine.isEmpty()) {
-            drawStatus(canvas, statusLine, CYAN);
         }
     }
 
