@@ -95,6 +95,7 @@ public final class LocatorOverlayView extends View {
         statusTextPaint.setColor(CYAN);
         statusTextPaint.setTextSize(13f * density);
         statusTextPaint.setShadowLayer(4f, 0f, 0f, CYAN);
+        setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
 
     /**
@@ -105,12 +106,29 @@ public final class LocatorOverlayView extends View {
     public void setDetections(List<Detection> dets, Detection target) {
         this.detections = (dets == null) ? Collections.<Detection>emptyList() : dets;
         this.target = target;
+        // Canvas-drawn boxes are not individually exposed to TalkBack. Give the
+        // overlay a concise, queryable description of the current primary match.
+        if (target != null) {
+            String direction = target.centerX() < 0.40f ? "left"
+                    : target.centerX() > 0.60f ? "right" : "ahead";
+            setContentDescription("Primary visible match: " + target.label + ", " + direction
+                    + ", model confidence " + Math.round(target.confidence * 100)
+                    + " percent. " + this.detections.size()
+                    + " matching objects shown. Distance and height are not measured.");
+        } else {
+            setContentDescription(this.detections.isEmpty()
+                    ? "No matching objects currently detected. Distance and height are not measured."
+                    : this.detections.size() + " matching objects shown. No primary match selected.");
+        }
         postInvalidate();
     }
 
     /** Update the bottom status strip. Pass empty string to hide it. */
     public void setStatus(String status) {
         this.statusLine = status == null ? "" : status;
+        if (getContentDescription() == null || getContentDescription().length() == 0) {
+            setContentDescription(this.statusLine);
+        }
         postInvalidate();
     }
 
