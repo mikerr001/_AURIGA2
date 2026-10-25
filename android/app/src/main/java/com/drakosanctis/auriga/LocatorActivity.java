@@ -107,6 +107,7 @@ public class LocatorActivity extends ComponentActivity {
     private PreviewView previewView;
     private LocatorOverlayView overlayView;
     private LinearLayout modelMissingPanel;
+    private TextView taskStatus;
 
     private TextView voiceSub;
     private TextView hapticSub;
@@ -202,6 +203,7 @@ public class LocatorActivity extends ComponentActivity {
         previewView = findViewById(R.id.locator_preview);
         overlayView = findViewById(R.id.locator_overlay);
         modelMissingPanel = findViewById(R.id.locator_model_missing);
+        taskStatus = findViewById(R.id.locator_task_status);
 
         wireDrawer();
         wireMenuToggle();
@@ -225,7 +227,7 @@ public class LocatorActivity extends ComponentActivity {
         // model must disable inference, not prevent the camera from opening.
         modelMissingPanel.setVisibility(View.GONE);
         overlayView.setModelReady(false);
-        overlayView.setStatus(detector == null
+        setLocatorStatus(detector == null
                 ? "CAMERA STARTING · DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED"
                 : "INITIALISING CAMERA…");
 
@@ -521,7 +523,7 @@ public class LocatorActivity extends ComponentActivity {
         if (granted) {
             startCamera();
         } else {
-            overlayView.setStatus("CAMERA PERMISSION REQUIRED");
+            setLocatorStatus("CAMERA PERMISSION REQUIRED");
             Toast.makeText(this,
                     "Object Locator needs the camera to detect objects.",
                     Toast.LENGTH_LONG).show();
@@ -542,18 +544,18 @@ public class LocatorActivity extends ComponentActivity {
                 bindCameraUseCases(provider);
                 overlayView.setModelReady(detector != null && analysisBound);
                 if (!analysisBound) {
-                    overlayView.setStatus("CAMERA PREVIEW ACTIVE · ANALYSIS UNAVAILABLE");
+                    setLocatorStatus("CAMERA PREVIEW ACTIVE · ANALYSIS UNAVAILABLE");
                     Toast.makeText(this,
                             "Camera preview is on, but live analysis could not start. Try closing other camera apps.",
                             Toast.LENGTH_LONG).show();
                 } else if (detector == null) {
-                    overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
+                    setLocatorStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
                 } else {
-                    overlayView.setStatus("CAMERA ACTIVE · DETECTOR READY");
+                    setLocatorStatus("CAMERA ACTIVE · DETECTOR READY");
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "Camera bind failed", t);
-                overlayView.setStatus("CAMERA UNAVAILABLE: " + t.getMessage());
+                setLocatorStatus("CAMERA UNAVAILABLE: " + t.getMessage());
             }
         }, ContextCompat.getMainExecutor(this));
     }
@@ -683,7 +685,7 @@ public class LocatorActivity extends ComponentActivity {
                     bmp.recycle();
                     mainHandler.post(() -> {
                         overlayView.setModelReady(false);
-                        overlayView.setStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
+                        setLocatorStatus("DETECTOR UNAVAILABLE — RANGE OUTPUT DISABLED");
                     });
                     return;
                 }
@@ -700,12 +702,12 @@ final List<Detection> uiDets = dets;
                     recentDetections = uiDets; // keep full scene for the describe command
                     overlayView.setDetections(uiFiltered, uiTarget);
                     if (uiTarget != null) {
-                        overlayView.setStatus(buildStatusLine(uiTarget));
+                        setLocatorStatus(buildStatusLine(uiTarget));
                         announceTarget(uiTarget);
                     } else if (uiDets.isEmpty()) {
-                        overlayView.setStatus("NO TARGETS IN VIEW");
+                        setLocatorStatus("NO TARGETS IN VIEW");
                     } else {
-                        overlayView.setStatus(uiDets.size()
+                        setLocatorStatus(uiDets.size()
                                 + " OBJECT" + (uiDets.size() == 1 ? "" : "S")
                                 + " — NONE MATCH FILTER");
                     }
@@ -833,6 +835,18 @@ final List<Detection> uiDets = dets;
      * Metric distance and height remain suppressed until a validated scale and
      * ground-plane solution are available.
      */
+    private void setLocatorStatus(String status) {
+        if (overlayView != null) overlayView.setStatus(status);
+        if (taskStatus != null) {
+            String readable = status == null ? "Status unavailable" : status
+                    .replace("·", " · ")
+                    .replace("RANGE OUTPUT DISABLED", "Distance and height unavailable")
+                    .replace("DETECTOR UNAVAILABLE", "Object detector unavailable");
+            taskStatus.setText(readable);
+            taskStatus.setContentDescription("Locator status: " + readable);
+        }
+    }
+
     private String buildStatusLine(Detection d) {
         return d.label.toUpperCase(Locale.US)
                 + " · " + directionWord(d.centerX()).toUpperCase(Locale.US)
