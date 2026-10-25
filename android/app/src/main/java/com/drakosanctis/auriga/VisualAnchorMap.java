@@ -168,6 +168,12 @@ public final class VisualAnchorMap {
         return new Snapshot(anchorViews, edgeViews, observations, lastAnchorId, lastObservationAt);
     }
 
+    /** Start a new camera session without drawing a false edge from the previous session. */
+    public synchronized void beginSession() {
+        lastAnchorId = -1L;
+        lastObservationAt = 0L;
+    }
+
     public synchronized void clear() {
         anchors.clear();
         edges.clear();
