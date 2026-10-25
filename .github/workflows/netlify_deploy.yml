@@ -1,20 +1,16 @@
 name: Deploy Auriga website to Netlify
 
 on:
+  # Deploy on every push to either working branch, including app-only commits.
   push:
     branches: [main, auriga-arael-1]
-    paths:
-      - 'website/web_deploy/**'
-      - 'website/netlify/functions/**'
-      - 'netlify.toml'
-      - '.github/workflows/netlify_deploy.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: netlify-${{ github.ref }}
+  group: netlify-production-site
   cancel-in-progress: true
 
 jobs:
@@ -97,7 +93,8 @@ jobs:
             --auth="$NETLIFY_AUTH_TOKEN"
             --message="Auriga ${GITHUB_REF_NAME} ${GITHUB_SHA}"
           )
-          if [ "$GITHUB_REF_NAME" = "main" ]; then
+          # The active Auriga branch intentionally updates the live site too.
+          if [ "$GITHUB_REF_NAME" = "main" ] || [ "$GITHUB_REF_NAME" = "auriga-arael-1" ]; then
             args+=(--prod)
           fi
           npx --yes netlify-cli@17 "${args[@]}"
