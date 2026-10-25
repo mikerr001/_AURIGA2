@@ -169,7 +169,7 @@ public final class LocatorOverlayView extends View {
             }
         }
         if (hit == null) return false;
-        targetTapListener.onTargetTapped(hit == target ? null : hit);
+        targetTapListener.onTargetTapped(hit);
         return true;
     }
 
