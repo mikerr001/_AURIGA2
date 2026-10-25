@@ -8,6 +8,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.MotionEvent;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +49,17 @@ public final class LocatorOverlayView extends View {
     private Detection target = null;
     private String statusLine = "";
     private boolean modelReady = false;
+    private OnTargetTapListener targetTapListener;
+
+    public interface OnTargetTapListener {
+        /** A null value requests automatic target selection again. */
+        void onTargetTapped(Detection detection);
+    }
+
+    public void setOnTargetTapListener(OnTargetTapListener listener) {
+        targetTapListener = listener;
+        setClickable(listener != null);
+    }
 
     private final Rect tmpTextBounds = new Rect();
 
@@ -141,6 +153,38 @@ public final class LocatorOverlayView extends View {
     public void setModelReady(boolean ready) {
         this.modelReady = ready;
         postInvalidate();
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (targetTapListener == null) return false;
+        if (event.getAction() == MotionEvent.ACTION_DOWN) return true;
+        if (event.getAction() != MotionEvent.ACTION_UP) return true;
+
+        float nx = event.getX() / Math.max(1f, getWidth());
+        float ny = event.getY() / Math.max(1f, getHeight());
+        Detection hit = null;
+        float smallestArea = Float.MAX_VALUE;
+        for (Detection d : detections) {
+            if (nx >= d.box.left && nx <= d.box.right
+                    && ny >= d.box.top && ny <= d.box.bottom
+                    && d.area() < smallestArea) {
+                hit = d;
+                smallestArea = d.area();
+            }
+        }
+        if (hit != null) {
+            targetTapListener.onTargetTapped(hit == target ? null : hit);
+            performClick();
+            return true;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        return true;
     }
 
     @Override
