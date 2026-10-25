@@ -44,18 +44,16 @@ jobs:
             echo 'Add both under Settings > Secrets and variables > Actions to enable deployment.'
             exit 1
           fi
-          npx --yes netlify-cli@17 deploy \
-            --dir=website/web_deploy \
-            --functions=website/netlify/functions \
-            --site="$NETLIFY_SITE_ID" \
-            --auth="$NETLIFY_AUTH_TOKEN" \
+          args=(
+            deploy
+            --dir=website/web_deploy
+            --functions=website/netlify/functions
+            --site="$NETLIFY_SITE_ID"
+            --auth="$NETLIFY_AUTH_TOKEN"
             --message="Auriga ${GITHUB_REF_NAME} ${GITHUB_SHA}"
+          )
           if [ "$GITHUB_REF_NAME" = "main" ]; then
-            npx --yes netlify-cli@17 deploy \
-              --dir=website/web_deploy \
-              --functions=website/netlify/functions \
-              --site="$NETLIFY_SITE_ID" \
-              --auth="$NETLIFY_AUTH_TOKEN" \
-              --prod \
-              --message="Auriga production ${GITHUB_SHA}"
+            args+=(--prod)
+          fi
+          npx --yes netlify-cli@17 "${args[@]}"
           fi
