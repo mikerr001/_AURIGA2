@@ -607,6 +607,14 @@ public class LocatorActivity extends ComponentActivity {
                 }
                 if (bmp == null) return;
 
+                // Opt-in local visual place memory; the map stores coarse image
+                // signatures only and never derives distances or bearings.
+                try {
+                    VisualAnchorMap.getInstance(getApplicationContext()).observe(bmp);
+                } catch (Throwable mapError) {
+                    Log.w(TAG, "Visual place-memory update failed", mapError);
+                }
+
                 // Keep the live preview and relay available even if the detector
                 // asset fails to load. Never substitute fabricated detections.
                 if (detector == null) {
