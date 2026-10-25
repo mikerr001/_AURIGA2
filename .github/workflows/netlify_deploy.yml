@@ -1,37 +1,61 @@
-name: Deploy to Netlify
+name: Deploy Auriga website to Netlify
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [main, auriga-arael-1]
+    paths:
+      - 'website/web_deploy/**'
+      - 'website/netlify/functions/**'
+      - 'netlify.toml'
+      - '.github/workflows/netlify_deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: netlify-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Deploy to Netlify
+
+      - name: Validate deploy source
+        run: |
+          test -f website/web_deploy/index.html
+          test -f netlify.toml
+          test -f website/netlify/functions/submit-feedback.js
+
+      - name: Deploy production site from main, preview from feature branch
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npm run deploy:draft
-          else
-            npm run deploy
+          set -euo pipefail
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo '::error::Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID repository secret.'
+            echo 'Add both under Settings > Secrets and variables > Actions to enable deployment.'
+            exit 1
+          fi
+          npx --yes netlify-cli@17 deploy \
+            --dir=website/web_deploy \
+            --functions=website/netlify/functions \
+            --site="$NETLIFY_SITE_ID" \
+            --auth="$NETLIFY_AUTH_TOKEN" \
+            --message="Auriga ${GITHUB_REF_NAME} ${GITHUB_SHA}"
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            npx --yes netlify-cli@17 deploy \
+              --dir=website/web_deploy \
+              --functions=website/netlify/functions \
+              --site="$NETLIFY_SITE_ID" \
+              --auth="$NETLIFY_AUTH_TOKEN" \
+              --prod \
+              --message="Auriga production ${GITHUB_SHA}"
           fi
