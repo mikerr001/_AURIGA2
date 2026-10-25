@@ -81,9 +81,9 @@ public final class AurigaHomeActivity extends Activity {
         content.addView(appBar);
 
         // Functional heading replaces the promotional website-style hero.
-        TextView greeting = text("What do you need?", 28, INK, true);
+        TextView greeting = text("What do you want to do?", 28, INK, true);
         content.addView(greeting, margins(-1, -2, 0, 28, 0, 4));
-        TextView intro = text("Choose one task. Each tool opens as a native Android screen.", 14, MUTED, false);
+        TextView intro = text("Start with the task. Auriga opens a focused native tool, with controls kept predictable.", 14, MUTED, false);
         content.addView(intro);
         TextView firstUse = text("First time? Allow camera access when asked. The microphone is only requested when you tap MIC; you can stop listening at any time.", 12, BRAND, false);
         firstUse.setLineSpacing(dp(2), 1f);
@@ -106,20 +106,20 @@ public final class AurigaHomeActivity extends Activity {
         scanTop.addView(nativeTag);
         scanCard.addView(scanTop);
 
-        TextView scanTitle = text("Start a live scan", 24, Color.WHITE, true);
+        TextView scanTitle = text("Find a specific object", 24, Color.WHITE, true);
         scanCard.addView(scanTitle, margins(-1, -2, 0, 14, 0, 4));
-        TextView scanCopy = text("Point the rear camera at your surroundings. Object detection is enabled only when the on-device model is ready.", 13, Color.rgb(202, 220, 225), false);
+        TextView scanCopy = text("Choose a target such as a person, phone, chair or vehicle. Then open the live locator. Auriga will say when its detector is unavailable.", 13, Color.rgb(202, 220, 225), false);
         scanCopy.setLineSpacing(dp(3), 1f);
         scanCard.addView(scanCopy);
 
-        Button start = button("Open camera  →", Color.rgb(156, 243, 213), INK, Color.TRANSPARENT);
+        Button start = button("Choose an object  →", Color.rgb(156, 243, 213), INK, Color.TRANSPARENT);
         scanCard.addView(start, margins(-1, dp(52), 0, 18, 0, 0));
         start.setContentDescription("Open the native live camera scanner. Camera permission will be requested if needed.");
         start.setOnClickListener(v -> open(LocatorActivity.class));
 
-        TextView toolsHeading = text("Quick tools", 20, INK, true);
+        TextView toolsHeading = text("Other tasks", 20, INK, true);
         content.addView(toolsHeading, margins(-1, -2, 0, 26, 0, 5));
-        TextView toolsSub = text("Open only what you need.", 13, MUTED, false);
+        TextView toolsSub = text("Reading, colour, saved places and device setup.", 13, MUTED, false);
         content.addView(toolsSub);
 
         LinearLayout firstRow = row();
