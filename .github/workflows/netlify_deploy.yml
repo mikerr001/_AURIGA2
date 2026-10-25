@@ -72,7 +72,7 @@ jobs:
           print("Website checks passed.")
           PY
 
-      - name: Deploy production site from main, preview from feature branch
+      - name: Deploy live Netlify site
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
