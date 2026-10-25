@@ -1,10 +1,11 @@
 {
-  "name": "DrakoSanctis System",
-  "short_name": "DrakoSanctis",
+  "name": "Auriga by DrakoSanctis",
+  "short_name": "Auriga",
+  "description": "Assistive technology project by DrakoSanctis.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0A0A0F",
-  "theme_color": "#0A0A0F",
+  "background_color": "#f6f8fb",
+  "theme_color": "#f6f8fb",
   "orientation": "portrait",
   "icons": [
     {
