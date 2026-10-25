@@ -159,18 +159,6 @@ public class LocatorActivity extends ComponentActivity {
 
     private HapticManager haptic;
 
-    // ── SIE (Sensory Independent Engine) ────────────────────────────
-    private HardwareHAL           hal;
-    private FiducialLUT           lut;
-    private TriangulationEngine   triangulation;
-    private DracoAIDEngine        dracoAID;
-    // MoveNet pose solver — fast-path H_c; null when model not bundled.
-    private MoveNetSolver         moveNetSolver;
-
-    // Frame dimensions updated each inference cycle so helpers have them.
-    private volatile int lastFrameWidth  = 640;
-    private volatile int lastFrameHeight = 480;
-
     // Short confirmation beep played when the camera locks on target.
     private ToneGenerator lockOnBeep;
 
@@ -276,27 +264,9 @@ public class LocatorActivity extends ComponentActivity {
         initTts();
         activeTargets = TargetStore.read(this);
 
-        // ── SIE init ─────────────────────────────────────────────
-        hal          = new HardwareHAL(this);
-        lut          = new FiducialLUT();
-        triangulation = new TriangulationEngine(lut, hal);
-        dracoAID     = new DracoAIDEngine(lut, hal);
-        // If DracoAID already has a stored H_c from a previous session,
-        // generate the dynamic LUT immediately so the first inference
-        // frame gets accurate distances without waiting for a person.
-        float storedHc = hal.loadStoredHc();
-        if (storedHc > 0f) {
-            float focalPx = hal.getFocalLengthPx(lastFrameWidth);
-            lut.generateDynamicTable(storedHc, focalPx, lastFrameHeight);
-            Log.d(TAG, "SIE: restored dynamic LUT from stored H_c=" + storedHc);
-        }
         try {
             lockOnBeep = new ToneGenerator(AudioManager.STREAM_MUSIC, 65);
         } catch (Throwable ignored) { }
-
-        // MoveNet Lightning — fast-path H_c solver (optional; graceful if absent).
-        // Runs synchronously on the analysis thread alongside YOLO; model is ~12 MB.
-        moveNetSolver = MoveNetSolver.tryCreate(this);
 
         ensureCameraPermissionAndStart();
     }
@@ -354,12 +324,6 @@ public class LocatorActivity extends ComponentActivity {
         }
         if (haptic != null) {
             try { haptic.stop(); } catch (Throwable ignored) {}
-        }
-        if (hal != null) {
-            try { hal.stopPitchSensor(); } catch (Throwable ignored) {}
-        }
-        if (moveNetSolver != null) {
-            try { moveNetSolver.close(); } catch (Throwable ignored) {}
         }
         if (lockOnBeep != null) {
             try { lockOnBeep.release(); } catch (Throwable ignored) {}
@@ -653,31 +617,7 @@ public class LocatorActivity extends ComponentActivity {
                 }
                 if (bmp == null) return;
 
-                final int fW = bmp.getWidth();
-                final int fH = bmp.getHeight();
-                lastFrameWidth  = fW;
-                lastFrameHeight = fH;
-
                 List<Detection> dets = detector.detect(bmp);
-
-                // ── DracoAID auto-calibration ─────────────────────
-                // MoveNet runs first — it's faster and more precise than
-                // the YOLO bbox path. If it commits a fast-path H_c,
-                // processFrame() will see isCalibrated()==true and skip
-                // its own accumulation for this frame, saving CPU.
-                if (moveNetSolver != null && dracoAID != null) {
-                    try {
-                        MoveNetSolver.Result mnr = moveNetSolver.solve(bmp, fH);
-                        if (mnr != null) {
-                            dracoAID.feedMoveNetHc(mnr.hcMetres, mnr.confidence, fH);
-                        }
-                    } catch (Throwable t) {
-                        Log.w(TAG, "MoveNet solve failed", t);
-                    }
-                }
-                if (dracoAID != null) {
-                    dracoAID.processFrame(dets, fW, fH);
-                }
 
                 List<Detection> filtered = filterByTargets(dets);
                 Detection target = pickPrimaryTarget(filtered);
@@ -813,37 +753,6 @@ overlayView.setDetections(uiDets, uiTarget);
             }
         }
         return best;
-    }
-
-    // ─── SIE spatial solve ────────────────────────────────────────
-
-    /**
-     * Run the SIE pipeline for one detection:
-     *   • SkyShield: bounding-box bottom in the upper 42 % of the frame
-     *     → treat as suspended overhang; use calculateSuspendedHeight.
-     *   • TruePath:  everything else → ground-plane triangulation.
-     *
-     * Falls back to the legacy REFERENCE_CONSTANT formula if the LUT
-     * is still running on synthetic defaults (no DracoAID commit yet).
-     */
-    private TriangulationEngine.SpatialOutput computeSpatialOutput(
-            Detection d, int fW, int fH) {
-        triangulation.setFrameSize(fW, fH);
-        int   baseY  = (int)(d.box.bottom * fH);
-        int   centX  = (int)(d.centerX()  * fW);
-        float widthPx = (d.box.right - d.box.left) * fW;
-
-        boolean suspended = baseY < fH * 0.42f;
-        try {
-            if (suspended) {
-                return triangulation.calculateSuspendedHeight(baseY, centX);
-            } else {
-                return triangulation.calculateGroundDistance(baseY, centX, widthPx);
-            }
-        } catch (Throwable t) {
-            Log.w(TAG, "SIE solve failed", t);
-            return null;
-        }
     }
 
     // ─── Native HUD status and speech ─────────────────────────────
