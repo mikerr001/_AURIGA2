@@ -247,6 +247,7 @@ public class LocatorActivity extends ComponentActivity {
         // Pick up changes the user made in TargetsActivity.
         try {
             activeTargets = TargetStore.read(this);
+            refreshTargetPickerButton();
         } catch (Throwable t) {
             Log.w(TAG, "TargetStore reload failed", t);
         }
@@ -896,8 +897,9 @@ final List<Detection> uiDets = dets;
         try { selection = TargetStore.read(this); }
         catch (Throwable t) { selection = Collections.emptySet(); }
         String summary = TargetStore.summary(selection);
-        targetButton.setText("TARGETS · " + summary.toUpperCase(Locale.US));
-        targetButton.setContentDescription("Change target selection. Current selection: " + summary);
+        String label = TargetStore.CATEGORY_ANY.equals(summary) ? "Any object" : summary;
+        targetButton.setText("FIND: " + label.toUpperCase(Locale.US));
+        targetButton.setContentDescription("Change what Auriga looks for. Current target filter: " + label + ". The locator prioritises a centred visible match; distance is not measured.");
     }
 
     private void wireMenuToggle() {
