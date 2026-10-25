@@ -168,7 +168,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
             } catch (Throwable t) {
                 Log.e("AurigaVoiceEngine", "Unable to start speech recognition", t);
                 listening = false;
-                if (!paused) AurigaVoiceService.startListening(activity);
                 if (listener != null) listener.onListeningStopped();
                 Toast.makeText(activity, "Microphone could not start. Check permission and close other recording apps.", Toast.LENGTH_LONG).show();
             }
@@ -371,8 +370,20 @@ public class AurigaVoiceEngine implements RecognitionListener {
         mainHandler.post(() -> {
             try { if (recognizer != null) { recognizer.destroy(); recognizer = null; } } catch (Throwable ignored) {}
             initRecognizer();
-            if (!paused && wasListening && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) AurigaVoiceService.startListening(activity);
             if (listener != null) listener.onListeningStopped();
+            if (!paused && wasListening) {
+                String message;
+                if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                    message = "I didn't catch that. Tap the mic and try again.";
+                } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    message = "Microphone permission is required.";
+                } else if (error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT) {
+                    message = "Speech service unavailable. Check connectivity or offline speech support.";
+                } else {
+                    message = "Microphone recognition stopped. Tap the mic to retry.";
+                }
+                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+            }
         });
     }
 
@@ -381,7 +392,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
         boolean wasListening = listening;
         listening = false;
         if (listener != null) listener.onListeningStopped();
-        if (!paused && wasListening && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) AurigaVoiceService.startListening(activity);
         if (!wasListening) return;
         ArrayList<String> matches =
                 results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
