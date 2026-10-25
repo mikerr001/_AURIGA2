@@ -44,8 +44,7 @@ public final class TargetStore {
         "clock", "book", "vase"
     };
     public static final String[] PERSONAL = {
-        "backpack", "umbrella", "handbag", "tie", "suitcase", "cell phone", "book", "bottle",
-        "keys"
+        "backpack", "umbrella", "handbag", "tie", "suitcase", "cell phone", "book", "bottle"
     };
 
     private TargetStore() {}
