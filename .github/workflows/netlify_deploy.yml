@@ -56,4 +56,3 @@ jobs:
             args+=(--prod)
           fi
           npx --yes netlify-cli@17 "${args[@]}"
-          fi
