@@ -76,6 +76,7 @@ public class LocatorActivity extends ComponentActivity {
     private static final int MIC_PERMISSION_REQUEST    = 1703;
     private static final int VOICE_SETUP_REQUEST       = 1704;
     private boolean pendingVoiceStart = false;
+    private boolean micPermissionPending = false;
 
     /** Same SharedPreferences keys the WebView locator used. */
     private static final String PREF_LOCATOR_VOICE  = "locator_web_voice_enabled";
@@ -393,6 +394,8 @@ public class LocatorActivity extends ComponentActivity {
             return;
         }
         pendingVoiceStart = true;
+        if (micPermissionPending) return;
+        micPermissionPending = true;
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST);
     }
@@ -480,6 +483,7 @@ public class LocatorActivity extends ComponentActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == MIC_PERMISSION_REQUEST) {
+            micPermissionPending = false;
             boolean granted = grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             boolean shouldStart = pendingVoiceStart;
