@@ -146,69 +146,15 @@ android {
         noCompress.add('bin')
     }
 
-    // Bundle the public web preview (website/web_deploy) into the APK as
-    // assets so LocatorWebActivity can load file:///android_asset/web/locator.html
-    // and render the same HUD the live website serves. We stage the
-    // copy under build/generated/web_assets/web/* and add the parent dir
-    // as an asset source set, instead of writing into src/main/assets,
-    // so the working tree stays clean and the copy is re-run whenever
-    // web_deploy changes.
-    sourceSets {
-        main {
-            assets.srcDirs += [layout.buildDirectory.dir('generated/web_assets').get().asFile]
-        }
-    }
 }
 
-def webDeployDir   = rootProject.file('../website/web_deploy')
-def webAssetsStage = layout.buildDirectory.dir('generated/web_assets/web')
-
-tasks.register('copyWebDeployToAssets', Copy) {
-    description = 'Copies website/web_deploy into the APK assets so LocatorWebActivity can render the web HUD.'
-    group       = 'build'
-    from(webDeployDir) {
-        // The on-device WebView never registers a service worker (it is
-        // loaded over file://), and the heavy data/ JSON datasets are
-        // calibration artifacts that the locator page does not consume.
-        // Skip them to keep the APK small.
-        exclude 'sw.js'
-        exclude 'data/**'
-    }
-    into(webAssetsStage)
-    // Re-run when the web bundle changes so an edit on the web side is
-    // automatically picked up by the next APK build.
-    inputs.dir(webDeployDir)
-    outputs.dir(webAssetsStage)
-}
-
-// Make every variant's asset-merge step depend on the copy task so the
-// staged web bundle is in place before AAPT packages assets.
+ // Safety net: model binaries are downloaded on demand and must never be
+ // bundled accidentally from a developer's local assets directory.
 android.applicationVariants.all { variant ->
     variant.mergeAssetsProvider.configure {
-        dependsOn 'copyWebDeployToAssets'
-        // Safety net: never bundle *.bin model files inside the APK.
-        // Models are downloaded on first run via ModelDownloadManager.
-        // This doLast fires after assets are merged and removes any .bin
-        // files that may have been staged locally for development.
         doLast {
             delete(fileTree(outputDir).matching { include '**/*.bin' })
         }
-    }
-}
-
-// AGP's lint pipeline (both the regular `lint*` tasks and the
-// release-only `lintVital*` / `generate*LintVitalReportModel` tasks)
-// scans the merged asset source-sets, which now include our staged
-// `build/generated/web_assets` directory. Without an explicit
-// dependency Gradle 8.5 fails release builds with an
-// "implicit dependency" validation error. Wire the copy task as a
-// hard dependency of every lint-related task so the staged web
-// bundle is always in place before lint reads it.
-tasks.configureEach {
-    def n = name
-    if (n.startsWith('lint')
-            || (n.startsWith('generate') && n.contains('Lint'))) {
-        dependsOn 'copyWebDeployToAssets'
     }
 }
 
