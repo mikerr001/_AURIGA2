@@ -3,203 +3,270 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f6f8fb">
-  <meta name="description" content="Auriga by DrakoSanctis — private, on-device spatial awareness tools designed to help people navigate information and the world around them.">
-  <title>Auriga — A little more awareness, wherever you go</title>
+  <meta name="theme-color" content="#07151d">
+  <meta name="description" content="Auriga by DrakoSanctis is an experimental, local-first assistive technology project. Explore its native Android tools and separate browser prototype.">
+  <meta name="color-scheme" content="dark light">
+  <title>Auriga — More context. More independence.</title>
   <link rel="icon" href="logo.png">
   <link rel="manifest" href="manifest.json">
   <style>
     :root {
-      color-scheme: light;
-      --page: #f6f8fb;
-      --surface: #ffffff;
-      --ink: #14202b;
-      --muted: #586775;
-      --line: #dfe6ec;
-      --brand: #087f8c;
-      --brand-strong: #05636d;
-      --brand-soft: #e0f4f3;
-      --navy: #112b39;
-      --amber: #8a5a00;
-      --amber-soft: #fff4d8;
+      --bg: #07151d;
+      --surface: #0d2029;
+      --surface-2: #122b35;
+      --ink: #eff9f8;
+      --muted: #a6bec3;
+      --line: #29434b;
+      --mint: #9cf3d5;
+      --mint-dark: #0a5c4c;
+      --blue: #9bdcff;
+      --amber: #ffd58b;
       --radius: 22px;
-      --shadow: 0 18px 48px rgba(16, 39, 55, .08);
+      color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--page); color: var(--ink); line-height: 1.55; }
+    body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; }
     a { color: inherit; }
-    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #db9700; outline-offset: 4px; }
-    .wrap { width: min(1160px, calc(100% - 40px)); margin-inline: auto; }
-    .skip { position: absolute; left: 16px; top: -100px; z-index: 10; background: var(--navy); color: white; padding: 12px 16px; border-radius: 10px; }
-    .skip:focus { top: 12px; }
-    header { position: sticky; top: 0; z-index: 5; background: rgba(246,248,251,.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(223,230,236,.8); }
-    .nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 800; letter-spacing: -.04em; font-size: 1.2rem; }
-    .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; color: white; background: var(--navy); font-size: 1.2rem; box-shadow: 0 7px 18px rgba(17,43,57,.18); }
-    .brand small { display: block; font-size: .68rem; color: var(--muted); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a { color: var(--muted); text-decoration: none; font-size: .92rem; font-weight: 650; }
-    .nav-links a:hover { color: var(--brand-strong); }
-    .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 20px; border: 1px solid transparent; border-radius: 999px; background: var(--brand); color: white; font: inherit; font-weight: 750; text-decoration: none; cursor: pointer; transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
-    .button:hover { background: var(--brand-strong); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(8,127,140,.2); }
-    .button.secondary { background: white; color: var(--ink); border-color: var(--line); }
-    .button.secondary:hover { border-color: #9db7bd; box-shadow: none; }
-    .menu-button { display: none; width: 46px; height: 46px; border: 1px solid var(--line); border-radius: 14px; background: white; font-size: 1.2rem; color: var(--ink); }
-    main { overflow: clip; }
-    .hero { padding: 78px 0 64px; }
-    .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 48px; align-items: center; }
-    .eyebrow { display: inline-flex; align-items: center; gap: 9px; border: 1px solid #b9dddc; background: var(--brand-soft); color: var(--brand-strong); padding: 7px 12px; border-radius: 999px; font-size: .77rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .eyebrow span { width: 7px; height: 7px; background: var(--brand); border-radius: 50%; }
-    h1 { max-width: 650px; margin: 22px 0 20px; font-size: clamp(2.8rem, 5.2vw, 5.25rem); line-height: .99; letter-spacing: -.075em; font-weight: 820; }
-    h1 em { color: var(--brand); font-style: normal; }
-    .hero-copy { max-width: 580px; color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.2rem); line-height: 1.75; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
-    .fineprint { margin-top: 18px; color: #687783; font-size: .82rem; }
-    .visual { position: relative; min-height: 430px; border-radius: 32px; background: var(--navy); overflow: hidden; box-shadow: var(--shadow); isolation: isolate; }
-    .visual::before { content: ""; position: absolute; width: 420px; height: 420px; border: 1px solid rgba(148,224,225,.24); border-radius: 50%; top: 10px; left: 50%; transform: translateX(-50%); }
-    .visual::after { content: ""; position: absolute; width: 300px; height: 300px; border: 1px solid rgba(148,224,225,.18); border-radius: 50%; top: 70px; left: 50%; transform: translateX(-50%); }
-    .visual-grid { position: absolute; inset: 0; opacity: .15; background-image: linear-gradient(rgba(180,232,233,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(180,232,233,.3) 1px, transparent 1px); background-size: 34px 34px; mask-image: linear-gradient(to bottom, black, transparent 92%); }
-    .scan { position: absolute; z-index: 1; top: 50%; left: 50%; width: min(75%, 310px); aspect-ratio: 1; transform: translate(-50%,-50%); border: 1px solid rgba(130,226,224,.65); border-radius: 50%; }
-    .scan::before, .scan::after { content: ""; position: absolute; background: rgba(130,226,224,.65); }
-    .scan::before { width: 1px; top: -25px; bottom: -25px; left: 50%; }
-    .scan::after { height: 1px; left: -25px; right: -25px; top: 50%; }
-    .target { position: absolute; z-index: 2; border: 2px solid #82e2e0; border-radius: 12px; background: rgba(8,127,140,.13); }
-    .target span { position: absolute; left: 0; top: -29px; padding: 4px 8px; white-space: nowrap; border-radius: 6px; background: #82e2e0; color: #102d38; font-size: .68rem; font-weight: 800; }
-    .target.one { width: 92px; height: 128px; left: 25%; top: 30%; }
-    .target.two { width: 66px; height: 75px; right: 20%; top: 45%; border-color: #f4c66a; }
-    .target.two span { background: #f4c66a; }
-    .center-dot { position: absolute; z-index: 3; width: 9px; height: 9px; left: 50%; top: 50%; transform: translate(-50%,-50%); border-radius: 50%; background: #fff; box-shadow: 0 0 0 8px rgba(130,226,224,.18); }
-    .visual-label { position: absolute; z-index: 3; color: #b9d5de; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
-    .visual-label.top { left: 24px; top: 22px; }
-    .visual-label.bottom { left: 24px; right: 24px; bottom: 22px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(185,213,222,.2); padding-top: 15px; }
-    .section { padding: 78px 0; }
-    .section-head { max-width: 680px; margin-bottom: 34px; }
-    .section-head h2 { margin: 12px 0; font-size: clamp(2rem, 3.5vw, 3.15rem); letter-spacing: -.06em; line-height: 1.08; }
-    .section-head p { color: var(--muted); font-size: 1.04rem; }
-    .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-    .product { min-height: 260px; padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; align-items: flex-start; }
-    .product-icon { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 16px; background: var(--brand-soft); color: var(--brand-strong); font-size: 1.35rem; font-weight: 800; }
-    .product h3 { margin: 22px 0 8px; font-size: 1.2rem; letter-spacing: -.03em; }
-    .product p { margin: 0 0 20px; color: var(--muted); font-size: .95rem; }
-    .product a { margin-top: auto; color: var(--brand-strong); text-decoration: none; font-weight: 800; font-size: .9rem; }
-    .product a:hover { text-decoration: underline; }
-    .principles { background: #eaf0f4; border-block: 1px solid #dbe4e9; }
-    .principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-    .principle { padding: 10px 0; }
-    .principle-number { color: var(--brand-strong); font-size: .78rem; font-weight: 850; letter-spacing: .12em; }
-    .principle h3 { font-size: 1.1rem; margin: 10px 0 6px; }
-    .principle p { color: var(--muted); margin: 0; }
-    .demo-panel { display: grid; grid-template-columns: 1fr auto; gap: 26px; align-items: center; padding: 34px; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; box-shadow: var(--shadow); }
-    .demo-panel h2 { margin: 0 0 8px; font-size: clamp(1.7rem, 3vw, 2.3rem); letter-spacing: -.055em; }
-    .demo-panel p { margin: 0; color: var(--muted); max-width: 680px; }
-    .notice { margin-top: 20px; padding: 15px 18px; border: 1px solid #efd89d; background: var(--amber-soft); border-radius: 14px; color: #694600; font-size: .88rem; }
-    .faq { display: grid; grid-template-columns: .7fr 1.3fr; gap: 48px; }
-    .faq h2 { margin: 0; font-size: clamp(2rem, 3.5vw, 3rem); letter-spacing: -.06em; line-height: 1.08; }
-    details { border-bottom: 1px solid var(--line); padding: 18px 0; }
-    summary { cursor: pointer; font-weight: 780; }
-    details p { color: var(--muted); margin-bottom: 0; }
-    footer { background: var(--navy); color: white; padding: 34px 0; }
-    .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-    footer p { color: #b8cbd2; margin: 4px 0 0; font-size: .85rem; }
-    .footer-links { display: flex; flex-wrap: wrap; gap: 18px; }
-    .footer-links a { color: #e0f4f3; font-size: .88rem; text-decoration: none; }
-    @media (max-width: 860px) {
-      .hero-grid { grid-template-columns: 1fr; gap: 32px; }
-      .visual { min-height: 360px; }
-      .product-grid, .principle-grid { grid-template-columns: 1fr 1fr; }
-      .faq { grid-template-columns: 1fr; gap: 22px; }
+    button, input, select, textarea { font: inherit; }
+    a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--amber); outline-offset: 4px;
     }
-    @media (max-width: 640px) {
+    .skip { position: absolute; top: -80px; left: 16px; z-index: 20; padding: 10px 14px; background: var(--mint); color: #07151d; border-radius: 10px; }
+    .skip:focus { top: 12px; }
+    .wrap { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .topbar { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(41,67,75,.85); background: rgba(7,21,29,.9); backdrop-filter: blur(18px); }
+    .nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 850; letter-spacing: -.04em; }
+    .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; color: #07151d; background: var(--mint); font-size: 1.2rem; font-weight: 950; }
+    .brand-name { display: block; font-size: 1.05rem; line-height: 1.1; }
+    .brand-sub { display: block; margin-top: 4px; color: var(--muted); font-size: .67rem; letter-spacing: .14em; text-transform: uppercase; }
+    .nav-links { display: flex; align-items: center; gap: 26px; }
+    .nav-links a { color: var(--muted); font-size: .9rem; text-decoration: none; }
+    .nav-links a:hover { color: var(--ink); }
+    .menu { display: none; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); min-width: 44px; min-height: 44px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 18px; border: 1px solid transparent; border-radius: 14px; background: var(--mint); color: #071a20; text-decoration: none; font-weight: 850; cursor: pointer; transition: transform .18s ease, background .18s ease; }
+    .button:hover { transform: translateY(-2px); background: #c1ffe7; }
+    .button.secondary { color: var(--ink); border-color: var(--line); background: var(--surface); }
+    .button.secondary:hover { background: var(--surface-2); }
+    .button.small { min-height: 40px; padding: 8px 13px; border-radius: 11px; font-size: .86rem; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--mint); font-size: .74rem; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+    .eyebrow:before { content: ""; width: 22px; height: 2px; background: currentColor; }
+    .hero { padding: 74px 0 66px; overflow: hidden; }
+    .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 54px; align-items: center; }
+    h1 { max-width: 680px; margin: 18px 0 20px; font-size: clamp(3rem, 6vw, 5.7rem); line-height: .98; letter-spacing: -.075em; }
+    h1 em { color: var(--mint); font-style: normal; }
+    .hero-copy { max-width: 590px; color: var(--muted); font-size: clamp(1.03rem, 1.5vw, 1.2rem); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .trust-row { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 24px; color: var(--muted); font-size: .8rem; }
+    .trust-row span:before { content: "•"; color: var(--mint); margin-right: 8px; }
+    .product-visual { position: relative; min-height: 490px; display: grid; place-items: center; }
+    .orbit { position: absolute; width: min(100%, 460px); aspect-ratio: 1; border: 1px solid rgba(156,243,213,.2); border-radius: 50%; }
+    .orbit.two { width: min(78%, 360px); border-color: rgba(155,220,255,.18); }
+    .orbit.three { width: min(56%, 260px); border-style: dashed; border-color: rgba(156,243,213,.23); }
+    .glow { position: absolute; width: 280px; height: 280px; border-radius: 50%; background: #1b796b; filter: blur(90px); opacity: .24; }
+    .device { position: relative; z-index: 1; width: min(290px, 75%); padding: 10px; border: 1px solid #46656d; border-radius: 34px; background: #030a0e; box-shadow: 0 30px 90px rgba(0,0,0,.45); transform: rotate(-3deg); }
+    .device-screen { min-height: 395px; position: relative; overflow: hidden; padding: 16px; border-radius: 25px; background: linear-gradient(160deg, #122f39, #07151d 70%); }
+    .device-top { display: flex; justify-content: space-between; color: #9bbdc4; font-size: .62rem; letter-spacing: .1em; }
+    .camera-scene { position: relative; height: 238px; margin: 20px -5px 16px; overflow: hidden; border: 1px solid #25464d; border-radius: 18px; background: radial-gradient(ellipse at 50% 90%, #1b4a4b 0, transparent 52%), linear-gradient(145deg,#0c2631,#173e43 48%,#08161d); }
+    .scene-grid { position: absolute; inset: 0; opacity: .22; background-image: linear-gradient(rgba(156,243,213,.35) 1px, transparent 1px),linear-gradient(90deg,rgba(156,243,213,.35) 1px,transparent 1px); background-size: 24px 24px; transform: perspective(150px) rotateX(14deg) scale(1.2); transform-origin: bottom; }
+    .scene-door { position: absolute; left: 15%; top: 14%; width: 27%; height: 62%; border: 2px solid var(--mint); border-bottom: 0; border-radius: 7px 7px 0 0; background: rgba(156,243,213,.07); }
+    .scene-person { position: absolute; right: 23%; top: 25%; width: 42px; height: 105px; border: 2px solid var(--blue); border-radius: 25px 25px 12px 12px; background: rgba(155,220,255,.08); }
+    .scene-person:before { content: ""; position: absolute; width: 26px; height: 26px; border: 2px solid var(--blue); border-radius: 50%; top: -31px; left: 6px; }
+    .scene-cross { position: absolute; left: 50%; top: 48%; width: 20px; height: 20px; transform: translate(-50%,-50%); }
+    .scene-cross:before,.scene-cross:after { content: ""; position: absolute; background: var(--mint); }
+    .scene-cross:before { width: 20px; height: 1px; top: 9px; }
+    .scene-cross:after { width: 1px; height: 20px; left: 9px; }
+    .scan-label { position: absolute; padding: 4px 7px; border-radius: 6px; background: var(--mint); color: #092026; font-size: .58rem; font-weight: 900; }
+    .scan-label.door { left: 12%; top: 8%; }
+    .scan-label.person { right: 10%; top: 17%; background: var(--blue); }
+    .device-status { display: flex; align-items: center; gap: 8px; padding: 10px 11px; border: 1px solid #24444b; border-radius: 12px; color: #c4d9dc; font-size: .7rem; }
+    .dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 14px rgba(156,243,213,.7); }
+    .device-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: #92b0b8; font-size: .62rem; }
+    .mini-wave { display: flex; align-items: center; gap: 3px; height: 20px; }
+    .mini-wave i { width: 3px; border-radius: 4px; background: var(--mint); height: 7px; }
+    .mini-wave i:nth-child(2),.mini-wave i:nth-child(6) { height: 13px; }
+    .mini-wave i:nth-child(3),.mini-wave i:nth-child(5) { height: 18px; }
+    .floating-note { position: absolute; z-index: 2; display: flex; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid #2b4d54; border-radius: 14px; background: rgba(13,32,41,.92); box-shadow: 0 15px 40px rgba(0,0,0,.25); }
+    .floating-note strong { display: block; font-size: .77rem; }
+    .floating-note small { display: block; color: var(--muted); font-size: .67rem; }
+    .floating-note .note-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: #153a3d; color: var(--mint); }
+    .floating-note.left { left: 0; top: 21%; }
+    .floating-note.right { right: -5px; bottom: 19%; }
+    .section { padding: 80px 0; border-top: 1px solid rgba(41,67,75,.7); }
+    .section-head { max-width: 690px; margin-bottom: 34px; }
+    h2 { margin: 12px 0; font-size: clamp(2rem, 3.7vw, 3.35rem); line-height: 1.08; letter-spacing: -.06em; }
+    .section-head p { color: var(--muted); font-size: 1.04rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .card { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .card-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: #163a3c; color: var(--mint); font-size: 1.25rem; font-weight: 900; }
+    .card h3 { margin: 19px 0 8px; font-size: 1.13rem; letter-spacing: -.02em; }
+    .card p { margin: 0; color: var(--muted); font-size: .93rem; }
+    .product-split { display: grid; grid-template-columns: .8fr 1.2fr; gap: 42px; align-items: start; }
+    .product-list { display: grid; gap: 12px; }
+    .product-row { display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: center; padding: 17px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); }
+    .product-row .card-icon { width: 44px; height: 44px; font-size: 1rem; }
+    .product-row h3 { margin: 0 0 3px; font-size: .98rem; }
+    .product-row p { margin: 0; color: var(--muted); font-size: .82rem; }
+    .tag { white-space: nowrap; padding: 5px 8px; border-radius: 8px; background: #163a3c; color: var(--mint); font-size: .67rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+    .tag.demo { background: #3c2e1d; color: var(--amber); }
+    .principles { background: linear-gradient(180deg, rgba(18,43,53,.45), rgba(7,21,29,0)); }
+    .principle-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+    .principle-number { color: var(--mint); font-size: .72rem; font-weight: 900; letter-spacing: .15em; }
+    .principle h3 { margin: 9px 0 6px; font-size: 1.05rem; }
+    .principle p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .try-panel { display: grid; grid-template-columns: .8fr 1.2fr; gap: 28px; padding: 30px; border: 1px solid #31525a; border-radius: 28px; background: radial-gradient(ellipse at 90% 0%, rgba(156,243,213,.1), transparent 45%), var(--surface); }
+    .try-panel p { color: var(--muted); }
+    .scene-demo { padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: #06141a; }
+    .scene-demo-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: .75rem; color: var(--muted); }
+    .scene-demo-head strong { color: var(--mint); letter-spacing: .1em; }
+    .demo-screen { min-height: 210px; display: grid; place-items: center; margin: 16px 0; border: 1px solid #25454d; border-radius: 14px; background: radial-gradient(ellipse at 50% 100%, #17484a, #0a202a 65%, #08161c); }
+    .demo-symbol { display: grid; place-items: center; width: 110px; height: 110px; border: 1px solid rgba(156,243,213,.6); border-radius: 50%; color: var(--mint); font-size: 2.3rem; box-shadow: 0 0 0 22px rgba(156,243,213,.04), 0 0 0 44px rgba(156,243,213,.025); }
+    .demo-status { min-height: 54px; padding: 12px; border: 1px solid #24444b; border-radius: 12px; color: #d9e9e8; font-size: .85rem; }
+    .demo-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .demo-controls button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); cursor: pointer; }
+    .demo-controls button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
+    .notice { margin-top: 18px; padding: 14px 16px; border: 1px solid #6d5430; border-radius: 13px; background: rgba(255,213,139,.08); color: #ffdfaa; font-size: .84rem; }
+    .faq { display: grid; grid-template-columns: .8fr 1.2fr; gap: 40px; }
+    details { border-bottom: 1px solid var(--line); padding: 17px 0; }
+    summary { cursor: pointer; font-weight: 800; }
+    details p { color: var(--muted); font-size: .92rem; }
+    .contact { display: grid; grid-template-columns: .8fr 1.2fr; gap: 30px; align-items: start; }
+    .form { display: grid; gap: 12px; }
+    .form label { display: grid; gap: 6px; color: var(--muted); font-size: .82rem; font-weight: 750; }
+    .form input,.form select,.form textarea { width: 100%; min-height: 46px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
+    .form textarea { min-height: 110px; resize: vertical; }
+    .form-note { min-height: 24px; color: var(--muted); font-size: .82rem; }
+    footer { margin-top: 30px; padding: 34px 0 42px; border-top: 1px solid var(--line); background: #050f14; }
+    .footer-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 25px; }
+    .footer-row p { max-width: 500px; color: var(--muted); font-size: .82rem; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 16px; }
+    .footer-links a { color: var(--muted); font-size: .85rem; text-decoration: none; }
+    .footer-links a:hover { color: var(--mint); }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f5f8f9; --surface:#ffffff; --surface-2:#eaf2f4; --ink:#10232c; --muted:#526b74; --line:#d5e1e5; --mint:#087e6a; --mint-dark:#0a5c4c; --blue:#087eaa; color-scheme:light; }
+      .topbar { background: rgba(245,248,249,.92); }
+      .button { color:#fff; background:#087e6a; }
+      .button:hover { background:#076858; }
+      .button.secondary { color:var(--ink); background:var(--surface); }
+      .product-visual .device { background:#e5eff1; border-color:#9db9c0; }
+      .device-screen { background:linear-gradient(160deg,#d8e9eb,#f5fbfb 70%); }
+      .device-top,.device-bottom { color:#49676e; }
+      .camera-scene { background:radial-gradient(ellipse at 50% 90%,#8cb9b0 0,transparent 52%),linear-gradient(145deg,#b9d6d7,#e1eeee 48%,#a6c4c8); }
+      .device-status { color:#1a3b43; border-color:#c5dcdf; }
+      .floating-note,.scene-demo { background:rgba(255,255,255,.94); }
+      .demo-screen { background:radial-gradient(ellipse at 50% 100%,#bdded8,#edf7f6 65%,#e2eff1); }
+      .demo-status { color:#183a41; }
+      footer { background:#eaf1f3; }
+      .notice { color:#714c10; }
+    }
+    @media (max-width: 850px) {
+      .hero-grid,.product-split,.try-panel,.faq,.contact { grid-template-columns: 1fr; }
+      .hero { padding-top: 48px; }
+      .product-visual { min-height: 440px; }
+      .grid-3,.principle-grid { grid-template-columns: 1fr; }
+      .card { padding: 22px; }
+      .product-split { gap: 24px; }
+      .faq { gap: 10px; }
+      .try-panel { padding: 22px; }
+      .floating-note.left { left: 2%; }
+      .floating-note.right { right: 1%; }
+    }
+    @media (max-width: 620px) {
       .wrap { width: min(100% - 28px, 1160px); }
       .nav { min-height: 68px; }
-      .menu-button { display: inline-grid; place-items: center; }
-      .nav-links { display: none; position: absolute; top: 68px; left: 0; right: 0; padding: 18px 22px 22px; background: var(--page); border-bottom: 1px solid var(--line); flex-direction: column; align-items: stretch; gap: 18px; }
+      .menu { display: block; }
+      .nav-links { display: none; position: absolute; top: 68px; left: 0; right: 0; padding: 18px 22px 22px; border-bottom: 1px solid var(--line); background: var(--bg); flex-direction: column; align-items: stretch; gap: 16px; }
       .nav-links.open { display: flex; }
       .nav-links .button { width: 100%; }
-      .hero { padding: 48px 0 34px; }
-      h1 { font-size: clamp(2.65rem, 14vw, 4rem); }
+      .hero { padding: 42px 0 45px; }
+      h1 { font-size: clamp(2.8rem, 13vw, 4.3rem); }
       .hero-actions .button { width: 100%; }
-      .visual { min-height: 320px; border-radius: 24px; }
-      .section { padding: 58px 0; }
-      .product-grid, .principle-grid { grid-template-columns: 1fr; }
-      .product { min-height: auto; }
-      .demo-panel { grid-template-columns: 1fr; padding: 24px; }
-      .demo-panel .button { width: 100%; }
-      .footer-row { align-items: flex-start; flex-direction: column; }
+      .product-visual { min-height: 395px; }
+      .device { width: 250px; }
+      .device-screen { min-height: 350px; }
+      .camera-scene { height: 205px; }
+      .floating-note { padding: 9px 10px; }
+      .floating-note.left { top: 12%; }
+      .floating-note.right { bottom: 9%; }
+      .product-row { grid-template-columns: 42px 1fr; }
+      .product-row .tag { grid-column: 2; justify-self: start; }
+      .footer-row { flex-direction: column; }
+      .section { padding: 60px 0; }
     }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
   </style>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <header>
+  <header class="topbar" id="top">
     <div class="wrap nav">
-      <a class="brand" href="#top" aria-label="Auriga home">
+      <a class="brand" href="#top" aria-label="Auriga by DrakoSanctis home">
         <span class="brand-mark" aria-hidden="true">A</span>
-        <span>Auriga<small>by DrakoSanctis</small></span>
+        <span><span class="brand-name">Auriga</span><span class="brand-sub">by DrakoSanctis</span></span>
       </a>
-      <button class="menu-button" id="menuButton" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation">☰</button>
+      <button class="menu" id="menuButton" aria-expanded="false" aria-controls="navLinks" aria-label="Open navigation">☰</button>
       <nav class="nav-links" id="navLinks" aria-label="Main navigation">
-        <a href="#products">What it does</a>
-        <a href="#principles">Our approach</a>
-        <a href="#try">Try the web demo</a>
-        <a class="button" href="https://github.com/mikerr001/_AURIGA2/actions/workflows/auriga-android-ci.yml">Android builds <span aria-hidden="true">↗</span></a>
+        <a href="#tools">Tools</a>
+        <a href="#principles">Principles</a>
+        <a href="#explore">Explore demo</a>
+        <a href="#contact">Contact</a>
+        <a class="button small" href="https://github.com/mikerr001/_AURIGA2/actions">Android builds ↗</a>
       </nav>
     </div>
   </header>
+
   <main id="main">
-    <section class="hero" id="top">
+    <section class="hero">
       <div class="wrap hero-grid">
         <div>
-          <div class="eyebrow"><span></span> An assistive technology project</div>
-          <h1>A little more awareness. <em>A little more freedom.</em></h1>
-          <p class="hero-copy">Auriga is an on-device copilot project exploring how a phone can help people understand their surroundings and everyday information—with privacy, clarity, and user control at the centre.</p>
+          <div class="eyebrow">An assistive technology project</div>
+          <h1>More context.<br><em>More independence.</em></h1>
+          <p class="hero-copy">Auriga is an experimental on-device copilot designed to make everyday surroundings and information easier to understand. Built around clear feedback, local-first processing, and honest system status.</p>
           <div class="hero-actions">
-            <a class="button" href="#products">Explore Auriga <span aria-hidden="true">→</span></a>
-            <a class="button secondary" href="locator.html">Open web demo <span aria-hidden="true">↗</span></a>
+            <a class="button" href="#tools">Explore Auriga <span aria-hidden="true">↓</span></a>
+            <a class="button secondary" href="https://github.com/mikerr001/_AURIGA2">View the project ↗</a>
           </div>
-          <p class="fineprint">Built by DrakoSanctis. The Android app and browser demo are separate experiences.</p>
+          <div class="trust-row"><span>Native Android tools</span><span>Offline-first direction</span><span>No safety claims without evidence</span></div>
         </div>
-        <div class="visual" role="img" aria-label="Illustration of an abstract spatial scan with outlined objects and direction markers">
-          <div class="visual-grid"></div>
-          <div class="visual-label top">Spatial view / concept illustration</div>
-          <div class="scan"></div>
-          <div class="target one"><span>OBJECT · LEFT</span></div>
-          <div class="target two"><span>OBJECT · RIGHT</span></div>
-          <div class="center-dot"></div>
-          <div class="visual-label bottom"><span>ON-DEVICE FIRST</span><span>USER IN CONTROL</span></div>
+        <div class="product-visual" aria-label="Illustration of the Auriga camera interface">
+          <div class="glow" aria-hidden="true"></div><div class="orbit" aria-hidden="true"></div><div class="orbit two" aria-hidden="true"></div><div class="orbit three" aria-hidden="true"></div>
+          <div class="device">
+            <div class="device-screen">
+              <div class="device-top"><span>AURIGA / NAVI</span><span>LOCAL MODE</span></div>
+              <div class="camera-scene" aria-hidden="true">
+                <div class="scene-grid"></div><div class="scene-door"></div><div class="scene-person"></div><div class="scene-cross"></div>
+                <span class="scan-label door">DOOR · LEFT</span><span class="scan-label person">PERSON</span>
+              </div>
+              <div class="device-status"><span class="dot"></span><span>Camera preview · interface concept</span></div>
+              <div class="device-bottom"><span>VOICE CUES</span><span class="mini-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>READY</span></div>
+            </div>
+          </div>
+          <div class="floating-note left"><span class="note-icon" aria-hidden="true">⌖</span><span><strong>Spatial context</strong><small>Designed for on-device use</small></span></div>
+          <div class="floating-note right"><span class="note-icon" aria-hidden="true">◖</span><span><strong>Voice when requested</strong><small>User stays in control</small></span></div>
         </div>
       </div>
     </section>
 
-    <section class="section" id="products">
-      <div class="wrap">
+    <section class="section" id="tools">
+      <div class="wrap product-split">
         <div class="section-head">
-          <div class="eyebrow"><span></span> The ecosystem</div>
-          <h2>Useful tools, designed around real life.</h2>
-          <p>Instead of one giant interface that tries to do everything, Auriga is being developed as a set of focused tools. Each tool should make its state clear and avoid pretending it knows something it cannot verify.</p>
+          <div class="eyebrow">One project, focused tools</div>
+          <h2>Useful actions, without the clutter.</h2>
+          <p>The Android app and browser prototype are separate experiences. Choose a task; Auriga should show what is available on that device instead of pretending every capability is ready.</p>
+          <a class="button secondary" href="https://github.com/mikerr001/_AURIGA2/actions">Check the latest Android build ↗</a>
         </div>
-        <div class="product-grid">
-          <article class="product">
-            <div class="product-icon" aria-hidden="true">◎</div>
-            <h3>Auriga Navi</h3>
-            <p>A native Android camera experience for object awareness and spatial cues. The current build is experimental; metric distance and hazard guidance still require real-world validation.</p>
-            <a href="https://github.com/mikerr001/_AURIGA2/actions/workflows/auriga-android-ci.yml">View Android builds ↗</a>
-          </article>
-          <article class="product">
-            <div class="product-icon" aria-hidden="true">▤</div>
-            <h3>DrakoVoice Reader</h3>
-            <p>Explore an on-device reading workflow for signs, labels, and printed text, with spoken output intended to work without sending images to a remote service.</p>
-            <a href="https://github.com/mikerr001/_AURIGA2">Explore the project ↗</a>
-          </article>
-          <article class="product">
-            <div class="product-icon" aria-hidden="true">⌘</div>
-            <h3>Web preview</h3>
-            <p>A separate browser-based concept for exploring the visual direction and interaction ideas. It is not the native Android app and does not represent validated sensing performance.</p>
-            <a href="locator.html">Open the web demo ↗</a>
-          </article>
+        <div class="product-list">
+          <article class="product-row"><span class="card-icon" aria-hidden="true">⌖</span><div><h3>Live Object Locator</h3><p>Native camera preview and on-device detection when the model is available.</p></div><span class="tag">Android</span></article>
+          <article class="product-row"><span class="card-icon" aria-hidden="true">Aa</span><div><h3>Read text</h3><p>Read printed text, signs and labels with speech output.</p></div><span class="tag">Android</span></article>
+          <article class="product-row"><span class="card-icon" aria-hidden="true">◉</span><div><h3>Colour sense</h3><p>Point at a scene and request a colour description.</p></div><span class="tag">Android</span></article>
+          <article class="product-row"><span class="card-icon" aria-hidden="true">↗</span><div><h3>Spatial memory</h3><p>Local route and landmark experiments, separate from validated metric navigation.</p></div><span class="tag demo">Experimental</span></article>
+          <article class="product-row"><span class="card-icon" aria-hidden="true">▦</span><div><h3>Browser prototype</h3><p>Try the visual concept in a browser; it is not the Android sensing pipeline.</p></div><a class="tag" href="locator.html">Open demo ↗</a></article>
         </div>
       </div>
     </section>
@@ -207,91 +274,94 @@
     <section class="section principles" id="principles">
       <div class="wrap">
         <div class="section-head">
-          <div class="eyebrow"><span></span> Design principles</div>
-          <h2>Trust is part of the interface.</h2>
-          <p>Assistive software must communicate uncertainty clearly. A polished screen is not a substitute for a reliable sensor pipeline.</p>
+          <div class="eyebrow">How Auriga should behave</div>
+          <h2>Trust is earned in the details.</h2>
+          <p>Assistive software has to be useful when it works—and clear when it cannot.</p>
         </div>
-        <div class="principle-grid">
-          <article class="principle">
-            <div class="principle-number">01 / PRIVACY</div>
-            <h3>Prefer local processing</h3>
-            <p>The product direction prioritises on-device processing and avoids requiring an account or cloud service for core features wherever practical.</p>
-          </article>
-          <article class="principle">
-            <div class="principle-number">02 / HONESTY</div>
-            <h3>Say when the system is unsure</h3>
-            <p>If a model or scale estimate is unavailable, the interface should disclose that state instead of inventing a distance or a confident warning.</p>
-          </article>
-          <article class="principle">
-            <div class="principle-number">03 / ACCESS</div>
-            <h3>Make the controls usable</h3>
-            <p>Clear focus states, large touch targets, concise language, reduced motion, and screen-reader semantics are baseline requirements—not extras.</p>
-          </article>
+        <div class="grid-3">
+          <article class="card"><span class="card-icon" aria-hidden="true">⌂</span><h3>Local-first by design</h3><p>Prioritise processing on the phone and avoid requiring an account or remote server for core features where practical.</p></article>
+          <article class="card"><span class="card-icon" aria-hidden="true">!</span><h3>Fail honestly</h3><p>If the detector, camera, or metric scale is unavailable, report that state. Never invent a distance or present a guess as a hazard warning.</p></article>
+          <article class="card"><span class="card-icon" aria-hidden="true">◉</span><h3>Accessible controls</h3><p>Large targets, clear focus, screen-reader labels, concise speech, and explicit microphone activation are part of the product—not polish for later.</p></article>
         </div>
       </div>
     </section>
 
-    <section class="section" id="try">
+    <section class="section" id="explore">
       <div class="wrap">
-        <div class="demo-panel">
+        <div class="try-panel">
           <div>
-            <div class="eyebrow"><span></span> Try the concept</div>
-            <h2>Explore the browser demo separately.</h2>
-            <p>The web demo is a visual prototype. It does not share a camera pipeline with the Android app, and its estimates must not be used for safety-critical mobility decisions.</p>
-            <div class="notice"><strong>Important:</strong> Auriga is an experimental project, not a certified mobility aid. Do not rely on this build to detect hazards or determine safe distances while walking.</div>
+            <div class="eyebrow">Interactive concept</div>
+            <h2>Explore a sample scene.</h2>
+            <p>Switch between a few simulated states to see how the interface communicates context. This is a UI demonstration only; it does not use your camera or measure the room.</p>
+            <a class="button secondary" href="locator.html">Open the browser prototype ↗</a>
+            <div class="notice"><strong>Safety:</strong> Auriga is experimental and is not a certified mobility aid. Do not rely on this website or current builds for collision avoidance, hazard detection, or safe-distance decisions.</div>
           </div>
-          <a class="button" href="locator.html">Launch web demo <span aria-hidden="true">↗</span></a>
+          <div class="scene-demo">
+            <div class="scene-demo-head"><strong>SCENE SIMULATOR</strong><span>ILLUSTRATIVE ONLY</span></div>
+            <div class="demo-screen" aria-hidden="true"><div class="demo-symbol" id="demoSymbol">⌖</div></div>
+            <div class="demo-status" id="demoStatus" aria-live="polite">Sample: a door-like object appears on the left. No distance is calculated.</div>
+            <div class="demo-controls" role="group" aria-label="Choose a sample scene">
+              <button type="button" data-scene="indoor" aria-pressed="true">Indoor scene</button>
+              <button type="button" data-scene="crossing" aria-pressed="false">Street scene</button>
+              <button type="button" data-scene="lowlight" aria-pressed="false">Low light</button>
+              <button type="button" data-scene="unavailable" aria-pressed="false">Detector offline</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="section">
       <div class="wrap faq">
-        <h2>Clear answers, no overpromises.</h2>
+        <div><div class="eyebrow">Straight answers</div><h2>What is ready—and what is not.</h2><p style="color:var(--muted)">We prefer a clear limitation to a polished overpromise.</p></div>
         <div>
-          <details>
-            <summary>Does Auriga require the cloud?</summary>
-            <p>The goal is local-first operation. Some optional website features and model downloads may need an internet connection; individual capabilities vary by build.</p>
-          </details>
-          <details>
-            <summary>Is the Android app the same as the web demo?</summary>
-            <p>No. The Android app is a native camera application. The web demo is a separate browser prototype and should never be presented as the native detector.</p>
-          </details>
-          <details>
-            <summary>Can I install the latest APK?</summary>
-            <p>Open the Android CI page to see the latest build status and available artifacts. An APK is only ready when the workflow completes successfully and uploads one.</p>
-          </details>
-          <details>
-            <summary>How can I report a problem?</summary>
-            <p>Use the <a href="https://github.com/mikerr001/_AURIGA2/issues">GitHub issue tracker</a> or email <a href="mailto:drakosanctis@gmail.com">drakosanctis@gmail.com</a>. Include your device model and the steps that reproduce the issue, but never share passwords or private keys.</p>
-          </details>
+          <details><summary>Is the Android app the same as the web demo?</summary><p>No. The Android app uses native Android activities and camera APIs. The browser demo is a separate prototype; the website illustration above is not a live camera feed.</p></details>
+          <details><summary>Does Auriga provide reliable distance measurements?</summary><p>Not as a validated mobility capability. Metric outputs must remain disabled whenever the detector, visual tracking, or scale confidence is not validated.</p></details>
+          <details><summary>Does it always listen to my microphone?</summary><p>The intended interaction is explicit voice activation. The app should request microphone access when you activate voice, show listening status, and release audio resources when listening ends.</p></details>
+          <details><summary>How do I get an APK?</summary><p>Open the <a href="https://github.com/mikerr001/_AURIGA2/actions">GitHub Actions builds</a>. Use an APK only when the corresponding workflow completes successfully and publishes an artifact.</p></details>
         </div>
       </div>
     </section>
+
+    <section class="section" id="contact">
+      <div class="wrap contact">
+        <div class="section-head">
+          <div class="eyebrow">Help improve Auriga</div>
+          <h2>Report what broke.</h2>
+          <p>Device model, Android version, the action you took, and the visible error are especially helpful. Do not send passwords, private keys, or sensitive personal data.</p>
+          <p><a href="https://github.com/mikerr001/_AURIGA2/issues">Open a GitHub issue ↗</a> or email <a href="mailto:drakosanctis@gmail.com">drakosanctis@gmail.com</a>.</p>
+        </div>
+        <form class="form" id="feedbackForm">
+          <label>Type of feedback<select name="category"><option value="bug">Bug report</option><option value="idea">Feature idea</option><option value="support">Help request</option><option value="other">Other</option></select></label>
+          <label>Email (required for bug/help requests)<input name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>
+          <label>What happened?<textarea name="message" minlength="5" maxlength="8000" required placeholder="What did you tap, what did you expect, and what happened instead?"></textarea></label>
+          <button class="button" type="submit">Send feedback ↗</button>
+          <div class="form-note" id="formNote" role="status" aria-live="polite">Feedback is sent to the site function when configured. If unavailable, the form will open your email app.</div>
+        </form>
+      </div>
+    </section>
   </main>
+
   <footer>
     <div class="wrap footer-row">
       <div>
-        <a class="brand" href="#top" style="color:white"><span class="brand-mark" style="background:#087f8c">A</span><span>Auriga<small style="color:#b8cbd2">by DrakoSanctis</small></span></a>
-        <p>Building assistive technology with privacy and honesty in mind.</p>
-        <p>© <span id="year"></span> DrakoSanctis. Project in development.</p>
+        <a class="brand" href="#top"><span class="brand-mark">A</span><span><span class="brand-name">Auriga</span><span class="brand-sub">by DrakoSanctis</span></span></a>
+        <p>Experimental assistive technology, developed with privacy, accessibility, and honest system status in mind.</p>
+        <p>© <span id="year"></span> DrakoSanctis · In development</p>
       </div>
-      <div class="footer-links">
-        <a href="https://github.com/mikerr001/_AURIGA2">GitHub</a>
-        <a href="https://github.com/mikerr001/_AURIGA2/issues">Report an issue</a>
-        <a href="mailto:drakosanctis@gmail.com">Contact</a>
-      </div>
+      <div class="footer-links"><a href="https://github.com/mikerr001/_AURIGA2">GitHub</a><a href="https://github.com/mikerr001/_AURIGA2/issues">Report an issue</a><a href="https://github.com/mikerr001/_AURIGA2/actions">Build status</a><a href="mailto:drakosanctis@gmail.com">Contact</a></div>
     </div>
   </footer>
+
   <script>
     (function () {
       var menu = document.getElementById("menuButton");
       var links = document.getElementById("navLinks");
       menu.addEventListener("click", function () {
-        var isOpen = links.classList.toggle("open");
-        menu.setAttribute("aria-expanded", String(isOpen));
-        menu.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
-        menu.textContent = isOpen ? "×" : "☰";
+        var open = links.classList.toggle("open");
+        menu.setAttribute("aria-expanded", String(open));
+        menu.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+        menu.textContent = open ? "×" : "☰";
       });
       links.querySelectorAll("a").forEach(function (link) {
         link.addEventListener("click", function () {
@@ -301,7 +371,59 @@
           menu.textContent = "☰";
         });
       });
+      var scenes = {
+        indoor: { symbol: "⌖", status: "Sample: a door-like object appears on the left. No distance is calculated." },
+        crossing: { symbol: "↔", status: "Sample: street scene selected. This demo does not detect traffic or tell you when it is safe to cross." },
+        lowlight: { symbol: "◐", status: "Sample: low-light condition. The real app should disclose reduced visibility rather than guess." },
+        unavailable: { symbol: "!", status: "Detector unavailable. A real build should keep unvalidated detections and metric outputs disabled." }
+      };
+      var status = document.getElementById("demoStatus");
+      var symbol = document.getElementById("demoSymbol");
+      document.querySelectorAll("[data-scene]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var key = button.getAttribute("data-scene");
+          document.querySelectorAll("[data-scene]").forEach(function (other) {
+            other.setAttribute("aria-pressed", String(other === button));
+          });
+          symbol.textContent = scenes[key].symbol;
+          status.textContent = scenes[key].status;
+        });
+      });
       document.getElementById("year").textContent = new Date().getFullYear();
+
+      var form = document.getElementById("feedbackForm");
+      var note = document.getElementById("formNote");
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        var data = new FormData(form);
+        var category = String(data.get("category") || "other");
+        var email = String(data.get("email") || "").trim();
+        var message = String(data.get("message") || "").trim();
+        if (message.length < 5) { note.textContent = "Please add a little more detail."; return; }
+        if ((category === "bug" || category === "support") && !email) {
+          note.textContent = "Please include an email for bug reports and help requests."; return;
+        }
+        note.textContent = "Sending feedback…";
+        try {
+          var response = await fetch("/.netlify/functions/submit-feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: category, email: email, message: message, product: "website", version: "web-current" })
+          });
+          var result = await response.json();
+          if (response.ok && result && result.ok) {
+            note.textContent = "Feedback received. Reference: " + (result.ticketId || "submitted") + ".";
+            form.reset();
+            return;
+          }
+          throw new Error("Feedback endpoint returned " + response.status);
+        } catch (error) {
+          var subject = encodeURIComponent("Auriga website feedback — " + category);
+          var body = encodeURIComponent("Category: " + category + "\nEmail: " + (email || "(not provided)") + "\n\n" + message);
+          note.textContent = "The feedback service is not configured or reachable. Opening your email app instead.";
+          window.location.href = "mailto:drakosanctis@gmail.com?subject=" + subject + "&body=" + body;
+        }
+      });
     }());
   </script>
 </body>
