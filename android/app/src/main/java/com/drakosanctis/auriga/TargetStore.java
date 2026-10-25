@@ -4,105 +4,121 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Thin SharedPreferences wrapper that persists which Object-Locator
- * categories the user wants Auriga to react to. Mirrors the web app's
- * {@code auriga-locator-targets} localStorage entry conceptually -- the
- * APK uses Google ML Kit's bundled object detector which classifies
- * detections into 5 broad offline categories (Fashion good, Home good,
- * Food, Place, Plant), so the picker exposes those plus a dedicated
- * "ANY OBJECT" wildcard.
- *
- * Storage shape: a simple comma-separated string under
- * {@code auriga_targets} inside the existing {@link MainActivity#PREFS_NAME}
- * SharedPreferences file. CSV instead of a Set keeps the on-disk format
- * trivially inspectable by adb shell run-as -- useful for QA.
- *
- * Default behaviour (no entry yet): "ANY OBJECT" ON. This preserves the
- * pre-Targets behaviour where every detection could trigger haptic +
- * voice. The user must explicitly narrow the list to opt in to filtering.
+ * Persists exact COCO classes used by the native YOLO locator.
+ * Selection labels intentionally match assets/coco_labels.txt and Detection.label.
  */
 public final class TargetStore {
-
-    /** SharedPreferences key. Lives inside {@link MainActivity#PREFS_NAME}. */
     public static final String PREF_KEY = "auriga_targets";
-
-    /** Wildcard sentinel meaning "trigger on any prominent detection". */
+    public static final String LEGACY_PREF_KEY = "auriga_legacy_targets";
     public static final String CATEGORY_ANY = "_any_";
 
-    /**
-     * The 5 ML Kit bundled-classifier labels. Surfaced verbatim so the
-     * filter check can do a case-insensitive equality against
-     * {@code DetectedObject.Label.getText()} without remapping.
-     */
-    public static final String[] CATEGORIES = new String[] {
-            "Fashion good",
-            "Home good",
-            "Food",
-            "Place",
-            "Plant"
+    public static final String[] CATEGORIES = {
+        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+        "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+        "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+        "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+        "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+        "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+        "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
+        "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+        "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
+    };
+
+    public static final String[] PEOPLE = {"person"};
+    public static final String[] TRANSPORT = {
+        "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+        "traffic light", "stop sign", "parking meter"
+    };
+    public static final String[] FOOD = {
+        "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza",
+        "donut", "cake", "bottle", "wine glass", "cup", "bowl"
+    };
+    public static final String[] HOME = {
+        "chair", "couch", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote",
+        "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+        "clock", "book", "vase"
+    };
+    public static final String[] PERSONAL = {
+        "backpack", "umbrella", "handbag", "tie", "suitcase", "cell phone", "book", "bottle",
+        "keys"
     };
 
     private TargetStore() {}
 
-    /**
-     * Read the current selection. Returns a fresh, mutable set; callers
-     * may add / remove without affecting persisted state. Empty set is
-     * never returned -- a missing entry is normalised to ANY.
-     */
     public static Set<String> read(Context ctx) {
-        SharedPreferences prefs = ctx.getSharedPreferences(
-                MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
-        String csv = prefs.getString(PREF_KEY, null);
+        return readKey(ctx, PREF_KEY, true);
+    }
+
+    /** The legacy ML Kit HUD has a different label taxonomy; keep its settings separate. */
+    public static Set<String> readLegacy(Context ctx) {
+        return readKey(ctx, LEGACY_PREF_KEY, true);
+    }
+
+    private static Set<String> readKey(Context ctx, String key, boolean defaultAny) {
+        SharedPreferences prefs = ctx.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        String csv = prefs.getString(key, null);
         Set<String> out = new LinkedHashSet<>();
         if (csv == null || csv.trim().isEmpty()) {
-            out.add(CATEGORY_ANY);
+            if (defaultAny) out.add(CATEGORY_ANY);
             return out;
         }
         for (String token : csv.split(",")) {
-            String t = token.trim();
-            if (!t.isEmpty()) out.add(t);
+            String value = token.trim();
+            if (!value.isEmpty()) out.add(value);
         }
-        if (out.isEmpty()) out.add(CATEGORY_ANY);
+        if (out.isEmpty() && defaultAny) out.add(CATEGORY_ANY);
         return out;
     }
 
-    /** Persist the selection. Empty set is normalised to ANY. */
     public static void write(Context ctx, Set<String> selection) {
-        SharedPreferences prefs = ctx.getSharedPreferences(
-                MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
-        Set<String> normalised = (selection == null || selection.isEmpty())
-                ? new HashSet<>(Arrays.asList(CATEGORY_ANY))
-                : selection;
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (String s : normalised) {
-            if (s == null || s.trim().isEmpty()) continue;
-            if (!first) sb.append(',');
-            sb.append(s.trim());
-            first = false;
-        }
-        prefs.edit().putString(PREF_KEY, sb.toString()).apply();
+        writeKey(ctx, PREF_KEY, selection);
     }
 
-    /**
-     * Returns true if a detection labelled {@code label} should trigger
-     * Auriga's haptic + voice feedback under the current selection.
-     * Wildcard ANY matches everything (including unclassified detections
-     * where label is null/empty). Otherwise we require a case-insensitive
-     * equality match against one of the persisted categories.
-     */
+    public static void writeLegacy(Context ctx, Set<String> selection) {
+        writeKey(ctx, LEGACY_PREF_KEY, selection);
+    }
+
+    private static void writeKey(Context ctx, String key, Set<String> selection) {
+        SharedPreferences prefs = ctx.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        Set<String> normalized = selection == null || selection.isEmpty()
+                ? new LinkedHashSet<>(Arrays.asList(CATEGORY_ANY)) : selection;
+        StringBuilder csv = new StringBuilder();
+        for (String value : normalized) {
+            if (value == null || value.trim().isEmpty()) continue;
+            if (csv.length() > 0) csv.append(',');
+            csv.append(value.trim());
+        }
+        prefs.edit().putString(key, csv.length() == 0 ? CATEGORY_ANY : csv.toString()).apply();
+    }
+
     public static boolean matches(Set<String> selection, String label) {
-        if (selection == null || selection.isEmpty()) return true;
-        if (selection.contains(CATEGORY_ANY)) return true;
+        if (selection == null || selection.isEmpty() || selection.contains(CATEGORY_ANY)) return true;
         if (label == null) return false;
         for (String chosen : selection) {
             if (chosen != null && chosen.equalsIgnoreCase(label)) return true;
         }
         return false;
+    }
+
+    /** Legacy ML Kit labels are deliberately isolated from COCO class filters. */
+    public static boolean matchesLegacy(Set<String> selection, String label) {
+        if (selection == null || selection.isEmpty() || selection.contains(CATEGORY_ANY)) return true;
+        if (label == null) return false;
+        for (String chosen : selection) if (chosen != null && chosen.equalsIgnoreCase(label)) return true;
+        return false;
+    }
+
+    public static String summary(Set<String> selection) {
+        if (selection == null || selection.isEmpty() || selection.contains(CATEGORY_ANY)) return "Any object";
+        if (selection.size() == 1) {
+            String value = selection.iterator().next();
+            return value.length() == 0 ? "Any object" : value.substring(0, 1).toUpperCase() + value.substring(1);
+        }
+        return selection.size() + " targets";
     }
 }
