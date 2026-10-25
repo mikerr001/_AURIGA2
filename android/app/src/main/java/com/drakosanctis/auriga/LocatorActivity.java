@@ -91,8 +91,8 @@ import java.util.concurrent.Executors;
  * {@code assets/}), {@link YoloDetector#tryCreate(Context)} returns
  * null, the camera pipeline never starts, and the user sees a
  * "model not bundled" panel with a one-tap fallback to the legacy
- * {@link LocatorWebActivity}. That keeps the APK installable even
- * before the model file lands in CI.
+ * {@link LocatorWebActivity}. The detector remains unavailable rather than silently switching
+ * to a web-rendered locator if the model is absent.
  *
  * <p>The drawer wiring, mute toggles, voice/haptic preference
  * persistence, calibration-walk gate and back-key behaviour all
@@ -261,7 +261,6 @@ public class LocatorActivity extends ComponentActivity {
 
         wireDrawer();
         wireMenuToggle();
-        wireWebViewFallbackButton();
         initVoiceNavigation();
 
         // Try to load the YOLO model. tryCreate() returns null when
@@ -1086,21 +1085,6 @@ public class LocatorActivity extends ComponentActivity {
             menu.setOnClickListener(v -> {
                 if (drawerLayout != null) {
                     drawerLayout.openDrawer(GravityCompat.START);
-                }
-            });
-        }
-    }
-
-    private void wireWebViewFallbackButton() {
-        Button fallback = findViewById(R.id.locator_open_webview);
-        if (fallback != null) {
-            fallback.setOnClickListener(v -> {
-                try {
-                    startActivity(new Intent(this, LocatorWebActivity.class));
-                } catch (Throwable t) {
-                    Toast.makeText(this,
-                            "WebView locator unavailable: " + t.getMessage(),
-                            Toast.LENGTH_LONG).show();
                 }
             });
         }
