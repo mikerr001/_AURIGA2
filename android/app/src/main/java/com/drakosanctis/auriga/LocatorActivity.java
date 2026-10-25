@@ -693,10 +693,11 @@ public class LocatorActivity extends ComponentActivity {
                 Detection target = pickPrimaryTarget(filtered);
 
 final List<Detection> uiDets = dets;
+                final List<Detection> uiFiltered = filtered;
                 final Detection uiTarget = target;
                 mainHandler.post(() -> {
-                    recentDetections = uiDets; // snapshot for "describe surroundings" command
-overlayView.setDetections(uiDets, uiTarget);
+                    recentDetections = uiDets; // keep full scene for the describe command
+                    overlayView.setDetections(uiFiltered, uiTarget);
                     if (uiTarget != null) {
                         overlayView.setStatus(buildStatusLine(uiTarget));
                         announceTarget(uiTarget);
