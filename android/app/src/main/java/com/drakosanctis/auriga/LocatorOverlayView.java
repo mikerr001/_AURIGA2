@@ -8,7 +8,6 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
-import android.view.MotionEvent;
 
 import java.util.Collections;
 import java.util.List;
@@ -58,7 +57,6 @@ public final class LocatorOverlayView extends View {
 
     public void setOnTargetTapListener(OnTargetTapListener listener) {
         targetTapListener = listener;
-        setClickable(listener != null);
     }
 
     private final Rect tmpTextBounds = new Rect();
@@ -155,14 +153,11 @@ public final class LocatorOverlayView extends View {
         postInvalidate();
     }
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    /** Handle a tap routed by the Activity only when no visible control was hit. */
+    public boolean handleTap(float x, float y) {
         if (targetTapListener == null) return false;
-        if (event.getAction() == MotionEvent.ACTION_DOWN) return true;
-        if (event.getAction() != MotionEvent.ACTION_UP) return true;
-
-        float nx = event.getX() / Math.max(1f, getWidth());
-        float ny = event.getY() / Math.max(1f, getHeight());
+        float nx = x / Math.max(1f, getWidth());
+        float ny = y / Math.max(1f, getHeight());
         Detection hit = null;
         float smallestArea = Float.MAX_VALUE;
         for (Detection d : detections) {
@@ -173,17 +168,8 @@ public final class LocatorOverlayView extends View {
                 smallestArea = d.area();
             }
         }
-        if (hit != null) {
-            targetTapListener.onTargetTapped(hit == target ? null : hit);
-            performClick();
-            return true;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean performClick() {
-        super.performClick();
+        if (hit == null) return false;
+        targetTapListener.onTargetTapped(hit == target ? null : hit);
         return true;
     }
 
