@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Core brand palette (unchanged for product consistency) -->
-    <color name="space_black">#0A0A0F</color>
-    <color name="cobalt_blue">#0057FF</color>
-    <color name="auriga_cyan">#00F0FF</color>
+    <!-- Core brand palette — calm teal, deep slate, high-contrast status colours -->
+    <color name="space_black">#0B1117</color>
+    <color name="cobalt_blue">#6487E8</color>
+    <color name="auriga_cyan">#63E4D1</color>
     <color name="warning_amber">#FFB300</color>
     <color name="alert_red">#FF3B30</color>
-    <color name="hud_text">#FFFFFF</color>
+    <color name="hud_text">#F4F7F9</color>
     <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
+    <color name="white">#F4F7F9</color>
 
-    <!-- Extended palette for the redesigned HUD -->
-    <color name="deep_space">#05060A</color>
-    <color name="nebula_indigo">#0B1230</color>
-    <color name="cyan_glow_30">#4D00F0FF</color>
-    <color name="cyan_glow_15">#2600F0FF</color>
-    <color name="cyan_glow_08">#1400F0FF</color>
-    <color name="cobalt_glow_25">#400057FF</color>
-    <color name="cobalt_dim">#1F0057FF</color>
+    <!-- Extended palette for the refreshed spatial interface -->
+    <color name="deep_space">#0E171D</color>
+    <color name="nebula_indigo">#17252D</color>
+    <color name="cyan_glow_30">#4D63E4D1</color>
+    <color name="cyan_glow_15">#2663E4D1</color>
+    <color name="cyan_glow_08">#1463E4D1</color>
+    <color name="cobalt_glow_25">#406487E8</color>
+    <color name="cobalt_dim">#1F6487E8</color>
     <color name="amber_glow_25">#40FFB300</color>
     <color name="alert_glow_30">#4DFF3B30</color>
     <color name="alert_red_dark">#B82B25</color>
 
-    <!-- Glassmorphism / card surfaces -->
+    <!-- Dark camera surfaces and restrained borders -->
     <color name="glass_panel">#80050A18</color>
     <color name="glass_panel_strong">#B3050A18</color>
-    <color name="glass_stroke">#3300F0FF</color>
-    <color name="glass_stroke_dim">#1A00F0FF</color>
+    <color name="glass_stroke">#3363E4D1</color>
+    <color name="glass_stroke_dim">#1A63E4D1</color>
 
     <!-- Status text tints -->
     <color name="status_online">#00F0B4</color>
-    <color name="muted_label">#7AA3C8</color>
+    <color name="muted_label">#A9BAC5</color>
 
     <!-- AI section accent -->
     <color name="ai_violet">#C39BD3</color>
@@ -42,8 +42,8 @@
     <!-- Drawer section accent colours -->
     <color name="emerald_green">#00D06A</color>
     <color name="emerald_glow_25">#4000D06A</color>
-    <color name="support_blue">#0057FF</color>
+    <color name="support_blue">#6487E8</color>
     <color name="section_header_text">#9AB8D8</color>
-    <color name="drawer_sub_text">#4D8AAA</color>
+    <color name="drawer_sub_text">#91AAB7</color>
     <color name="amber_text">#FFB300</color>
 </resources>
