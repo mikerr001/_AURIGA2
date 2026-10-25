@@ -51,6 +51,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
+    private boolean cameraPermissionPending = false;
+    private final AtomicBoolean mainLoopRunning = new AtomicBoolean(false);
 
     // Target bitmap width for the per-frame scan pipeline. Height is
     // computed dynamically from the live TextureView aspect ratio so a
@@ -230,7 +232,12 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         initStep("voice",              () -> voice = new DrakoVoice(this));
         initStep("sonar",              () -> sonar = new SonarManager());
         initStep("haptic",             () -> haptic = new HapticManager(this));
-        initStep("camera",             () -> camera = new CameraService(this));
+        initStep("camera",             () -> camera = new CameraService(this, (message, error) -> {
+            Log.i(TAG, message, error);
+            if (error != null) {
+                runOnUiThread(() -> Toast.makeText(this, message, Toast.LENGTH_LONG).show());
+            }
+        }));
 
         // ML Kit object detector for the Object Targets gate. Bundled
         // model + STREAM_MODE keeps it real-time and fully offline.
@@ -308,17 +315,43 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
     private void checkPermissions() {
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CODE);
+            requestCameraPermission();
+        } else {
+            startLegacyCameraIfReady();
         }
+    }
+
+    private void requestCameraPermission() {
+        if (cameraPermissionPending) return;
+        cameraPermissionPending = true;
+        requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CODE);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, restart camera if needed
-            }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != PERMISSION_REQUEST_CODE) return;
+        cameraPermissionPending = false;
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startLegacyCameraIfReady();
+        } else {
+            Toast.makeText(this, "Camera permission is required for the live navigation view.",
+                    Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void startLegacyCameraIfReady() {
+        if (camera == null || textureView == null || !textureView.isAvailable()
+                || !coreEnginesReady()) return;
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+            return;
+        }
+        SurfaceTexture surface = textureView.getSurfaceTexture();
+        if (surface == null) return;
+        applyBitmapSizeFromTexture(textureView.getWidth(), textureView.getHeight());
+        camera.start(surface);
+        startMainLoop();
     }
 
     private void initUI() {
@@ -997,14 +1030,17 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             Log.w(TAG, "Surface ready but one or more engine layers were not constructed; skipping main loop.");
             return;
         }
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
+            return;
+        }
         // Derive an aspect-preserving bitmap size the first time we see
         // the TextureView dimensions. Stretching a 20:9 preview into a
         // 4:3 bitmap was the dominant residual distance bias; by
         // locking the bitmap height to the texture's real aspect, rows
         // and the horizon stay where the LUT expects them.
         applyBitmapSizeFromTexture(width, height);
-        camera.start(surface);
-        startMainLoop();
+        startLegacyCameraIfReady();
     }
 
     /**
@@ -1058,11 +1094,12 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     }
 
     private void startMainLoop() {
+        if (!mainLoopRunning.compareAndSet(false, true)) return;
         // Main high-performance feedback loop (30+ FPS)
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (!isFinishing()) {
+                while (mainLoopRunning.get() && !isFinishing()) {
                     // Fix 6: getBitmap() must be called from the UI thread.
                     // Size is the aspect-preserving active bitmap computed
                     // from the TextureView geometry in onSurfaceTextureAvailable;
@@ -1087,7 +1124,13 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                     // read before the UI thread had a chance to write it.
                     try { latch.await(100, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { }
                     Bitmap frame = frameHolder[0];
-                    if (frame == null) continue;
+                    if (frame == null) {
+                        try { Thread.sleep(17); } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                        continue;
+                    }
 
                     if (calibrationManager.getState() == CalibrationManager.State.DETECTING) {
                         // --- CALIBRATION MODE ---
@@ -1106,10 +1149,14 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                         processNavigationFrame(frame);
                     }
                     
-                    try { Thread.sleep(17); } catch (InterruptedException e) { }
+                    try { Thread.sleep(17); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
+                mainLoopRunning.set(false);
             }
-        }).start();
+        }, "AurigaNavigationLoop").start();
     }
 
     /**
@@ -1506,6 +1553,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         // Fires during teardown regardless of init outcome; skip cleanly if
         // camera's initStep never produced an instance.
+        mainLoopRunning.set(false);
         if (camera != null) camera.stop();
         return true;
     }
@@ -1545,6 +1593,8 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
     @Override
     protected void onDestroy() {
+        mainLoopRunning.set(false);
+        if (camera != null) camera.release();
         super.onDestroy();
         // Unregister AI download listener to avoid leaking this Activity.
         try {
