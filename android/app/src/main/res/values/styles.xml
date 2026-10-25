@@ -18,12 +18,9 @@
         <item name="android:textSize">52sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/auriga_cyan</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:letterSpacing">0.04</item>
-        <item name="android:shadowColor">@color/auriga_cyan</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">0</item>
-        <item name="android:shadowRadius">14</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:shadowRadius">0</item>
     </style>
 
     <style name="HUDReadoutMedium">
@@ -32,12 +29,9 @@
         <item name="android:textSize">28sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/hud_text</item>
-        <item name="android:fontFamily">sans-serif-condensed</item>
-        <item name="android:letterSpacing">0.06</item>
-        <item name="android:shadowColor">@color/cyan_glow_30</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">0</item>
-        <item name="android:shadowRadius">10</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:shadowRadius">0</item>
     </style>
 
     <style name="HUDLabelSmall">
@@ -46,7 +40,7 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/muted_label</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.18</item>
+        <item name="android:letterSpacing">0.08</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
