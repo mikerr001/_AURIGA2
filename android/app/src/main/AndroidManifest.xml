@@ -91,6 +91,13 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/AurigaHUDTheme" />
 
+        <activity
+            android:name=".SpatialMapActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/AurigaDocTheme" />
+
         <!-- Object Targets picker (Phase 1 of Object Locator on APK).
              Lets the user pick which ML Kit detection categories should
              trigger haptic + DrakoVoice feedback on the live HUD. Runs
