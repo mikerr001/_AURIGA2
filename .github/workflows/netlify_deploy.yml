@@ -85,9 +85,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
-            echo '::warning::Netlify deploy skipped because NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID is not configured.'
-            echo 'Add both repository secrets to enable this workflow, or enable Netlify Git deployment for the configured branch.'
-            exit 0
+            echo '::error::Netlify deployment did not run: NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID must both be configured as repository Actions secrets.'
+            echo 'Configure both secrets in GitHub repository Settings > Secrets and variables > Actions, or disable this workflow and use Netlify Git continuous deployment.'
+            exit 1
           fi
           args=(
             deploy
