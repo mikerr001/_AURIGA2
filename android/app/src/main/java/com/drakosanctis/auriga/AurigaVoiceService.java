@@ -10,7 +10,6 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.AudioFormat;
-import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
@@ -75,7 +74,8 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
     private volatile boolean recognizerBusy = false;
     private long           lastRecognitionAt = 0L;
     private SpeechRecognizer recognizer;
-    private boolean        systemMuted   = false;
+    private volatile boolean shuttingDown = false;
+    private volatile boolean usingLegacyFallback = false;
 
     // ── Static helpers ────────────────────────────────────────────────────────
 
@@ -115,6 +115,7 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
     @Override
     public void onDestroy() {
         // Signal VAD thread to exit
+        shuttingDown = true;
         vadRunning = false;
 
         // Release AudioRecord immediately so the thread unblocks from read()
@@ -136,7 +137,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
         }
 
         handler.removeCallbacksAndMessages(null);
-        unmuteSystem();
 
         if (recognizer != null) {
             try { recognizer.cancel(); recognizer.destroy(); }
@@ -197,6 +197,7 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
             return;
         }
 
+        usingLegacyFallback = false;
         vadRunning = true;
         vadThread = new Thread(this::vadLoop, "auriga-vad");
         vadThread.setDaemon(true);
@@ -228,8 +229,11 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
                     long now = System.currentTimeMillis();
                     if (now - lastRecognitionAt >= RECOGNIZER_COOLDOWN_MS) {
                         recognizerBusy = true;
-                        speechChunks   = 0;
-                        handler.post(this::fireRecognizer);
+                        speechChunks = 0;
+                        // Release AudioRecord before SpeechRecognizer claims the microphone.
+                        vadRunning = false;
+                        handler.postDelayed(this::pauseVadAndFireRecognizer, 120);
+                        break;
                     }
                 }
             } else {
@@ -238,6 +242,27 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
             }
         }
         Log.i(TAG, "VAD loop exited.");
+    }
+
+    private void pauseVadAndFireRecognizer() {
+        if (shuttingDown) { recognizerBusy = false; return; }
+        AudioRecord ar = audioRecord;
+        audioRecord = null;
+        if (ar != null) {
+            try { if (ar.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) ar.stop(); } catch (Throwable ignored) {}
+            try { ar.release(); } catch (Throwable ignored) {}
+        }
+        fireRecognizer();
+    }
+
+    private void restartListeningAfterRecognition() {
+        if (shuttingDown || ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return;
+        if (usingLegacyFallback) {
+            if (recognizer == null) recognizer = createRecognizer();
+            if (recognizer != null) handler.postDelayed(this::startLegacyCycle, 500);
+        } else {
+            handler.postDelayed(this::startVadLoop, 350);
+        }
     }
 
     private static float computeRms(short[] buf, int count) {
@@ -250,12 +275,11 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
     // ── Gated SpeechRecognizer ────────────────────────────────────────────────
 
     private void fireRecognizer() {
-        if (!vadRunning) { recognizerBusy = false; return; }
+        if (shuttingDown) { recognizerBusy = false; return; }
         if (recognizer == null) {
             recognizer = createRecognizer();
             if (recognizer == null) { recognizerBusy = false; return; }
         }
-        muteSystem();
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -266,7 +290,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
             recognizer.startListening(intent);
         } catch (Throwable t) {
             Log.e(TAG, "startListening failed", t);
-            unmuteSystem();
             recognizerBusy = false;
         }
     }
@@ -289,7 +312,8 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
      * loop, accepting the music-ducking side-effect on those devices.
      */
     private void fallbackToRecognizerLoop() {
-        Log.w(TAG, "Falling back to SpeechRecognizer loop (music may be ducked on this device).");
+        Log.w(TAG, "Falling back to SpeechRecognizer loop because AudioRecord is unavailable.");
+        usingLegacyFallback = true;
         recognizer = createRecognizer();
         if (recognizer == null) return;
         vadRunning = true; // keep service alive
@@ -298,7 +322,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
 
     private void startLegacyCycle() {
         if (!vadRunning || recognizer == null) return;
-        muteSystem();
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -308,7 +331,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
         try {
             recognizer.startListening(intent);
         } catch (Throwable t) {
-            unmuteSystem();
             handler.postDelayed(this::startLegacyCycle, 2000);
         }
     }
@@ -317,7 +339,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
 
     @Override
     public void onReadyForSpeech(Bundle params) {
-        unmuteSystem();
     }
 
     @Override public void onBeginningOfSpeech() {}
@@ -327,24 +348,22 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
 
     @Override
     public void onError(int error) {
-        unmuteSystem();
         recognizerBusy = false;
-        // Recreate recognizer on non-transient errors
-        if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) return;
+        if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+            recognizerBusy = false;
+            restartListeningAfterRecognition();
+            return;
+        }
         if (recognizer != null) {
             try { recognizer.destroy(); } catch (Throwable ignored) {}
             recognizer = null;
         }
-        if (!vadRunning) return;
-        // If we're in fallback (legacy) mode, restart the cycle after a delay
-        if (audioRecord == null) {
-            handler.postDelayed(this::startLegacyCycle, 1500);
-        }
+        recognizerBusy = false;
+        if (!shuttingDown) restartListeningAfterRecognition();
     }
 
     @Override
     public void onResults(Bundle results) {
-        unmuteSystem();
         recognizerBusy = false;
         lastRecognitionAt = System.currentTimeMillis();
 
@@ -359,10 +378,7 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
             }
         }
 
-        // In legacy fallback mode, schedule the next cycle
-        if (audioRecord == null && vadRunning) {
-            handler.postDelayed(this::startLegacyCycle, 300);
-        }
+        restartListeningAfterRecognition();
     }
 
     @Override public void onPartialResults(Bundle partialResults) {}
@@ -387,32 +403,6 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
         Intent broadcast = new Intent(AurigaVoiceEngine.ACTION_WAKE_WORD);
         broadcast.setPackage(getPackageName());
         sendBroadcast(broadcast);
-    }
-
-    // ── System audio mute (suppress the SpeechRecognizer "ding") ─────────────
-
-    private void muteSystem() {
-        if (systemMuted) return;
-        try {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.adjustStreamVolume(AudioManager.STREAM_SYSTEM,
-                        AudioManager.ADJUST_MUTE, 0);
-                systemMuted = true;
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    private void unmuteSystem() {
-        if (!systemMuted) return;
-        try {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.adjustStreamVolume(AudioManager.STREAM_SYSTEM,
-                        AudioManager.ADJUST_UNMUTE, 0);
-                systemMuted = false;
-            }
-        } catch (Throwable ignored) {}
     }
 
     // ── Persistent notification ───────────────────────────────────────────────
