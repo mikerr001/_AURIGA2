@@ -83,8 +83,11 @@ public final class AurigaHomeActivity extends Activity {
         // Functional heading replaces the promotional website-style hero.
         TextView greeting = text("What do you need?", 28, INK, true);
         content.addView(greeting, margins(-1, -2, 0, 28, 0, 4));
-        TextView intro = text("Choose one task. Auriga opens a focused native tool.", 14, MUTED, false);
+        TextView intro = text("Choose one task. Each tool opens as a native Android screen.", 14, MUTED, false);
         content.addView(intro);
+        TextView firstUse = text("First time? Allow camera access when asked. The microphone is only requested when you tap MIC; you can stop listening at any time.", 12, BRAND, false);
+        firstUse.setLineSpacing(dp(2), 1f);
+        content.addView(firstUse, margins(-1, -2, 0, 12, 0, 0));
 
         // One primary action, visually dominant and easy to hit.
         LinearLayout scanCard = column();
@@ -111,6 +114,7 @@ public final class AurigaHomeActivity extends Activity {
 
         Button start = button("Open camera  →", Color.rgb(156, 243, 213), INK, Color.TRANSPARENT);
         scanCard.addView(start, margins(-1, dp(52), 0, 18, 0, 0));
+        start.setContentDescription("Open the native live camera scanner. Camera permission will be requested if needed.");
         start.setOnClickListener(v -> open(LocatorActivity.class));
 
         TextView toolsHeading = text("Quick tools", 20, INK, true);
