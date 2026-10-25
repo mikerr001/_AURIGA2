@@ -34,7 +34,7 @@ import java.util.Locale;
  *
  * <p><b>Problem with the old approach:</b> Calling {@link SpeechRecognizer#startListening}
  * in a tight loop causes the recognizer's internal Google process to request
- * {@link AudioManager#AUDIOFOCUS_GAIN} on every ~300 ms cycle. This ducks music
+ * audio focus on every ~300 ms cycle. This ducks music
  * and media playback continuously — a disruptive experience for blind users who
  * rely on audio.
  *
@@ -278,7 +278,7 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
         if (shuttingDown) { recognizerBusy = false; return; }
         if (recognizer == null) {
             recognizer = createRecognizer();
-            if (recognizer == null) { recognizerBusy = false; return; }
+            if (recognizer == null) { recognizerBusy = false; handler.postDelayed(this::restartListeningAfterRecognition, 3000); return; }
         }
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -291,6 +291,7 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
         } catch (Throwable t) {
             Log.e(TAG, "startListening failed", t);
             recognizerBusy = false;
+            handler.postDelayed(this::restartListeningAfterRecognition, 2000);
         }
     }
 
@@ -348,18 +349,16 @@ public class AurigaVoiceService extends Service implements RecognitionListener {
 
     @Override
     public void onError(int error) {
+        Log.w(TAG, "Speech recognition error: " + error);
         recognizerBusy = false;
-        if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-            recognizerBusy = false;
-            restartListeningAfterRecognition();
-            return;
-        }
         if (recognizer != null) {
             try { recognizer.destroy(); } catch (Throwable ignored) {}
             recognizer = null;
         }
-        recognizerBusy = false;
-        if (!shuttingDown) restartListeningAfterRecognition();
+        if (!shuttingDown) {
+            long delay = error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ? 1800L : 700L;
+            handler.postDelayed(this::restartListeningAfterRecognition, delay);
+        }
     }
 
     @Override
