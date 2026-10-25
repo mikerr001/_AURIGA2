@@ -167,6 +167,9 @@ public class LocatorActivity extends ComponentActivity {
     };
 
     private Set<String> activeTargets = Collections.emptySet();
+    private volatile String lockedTargetLabel = null;
+    private volatile float lockedTargetX = 0.5f;
+    private volatile float lockedTargetY = 0.5f;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -203,6 +206,22 @@ public class LocatorActivity extends ComponentActivity {
         previewView = findViewById(R.id.locator_preview);
         overlayView = findViewById(R.id.locator_overlay);
         modelMissingPanel = findViewById(R.id.locator_model_missing);
+        overlayView.setOnTargetTapListener(detection -> {
+            if (detection == null) {
+                if (lockedTargetLabel != null) {
+                    lockedTargetLabel = null;
+                    setLocatorStatus("AUTO PICK · CENTRED MATCH");
+                    Toast.makeText(this, "Focus released. Automatic target selection resumed.", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+            lockedTargetLabel = detection.label;
+            lockedTargetX = detection.centerX();
+            lockedTargetY = detection.centerY();
+            setLocatorStatus("FOCUSED · " + detection.label.toUpperCase(Locale.US)
+                    + " · TAP ITS BOX TO RELEASE");
+            Toast.makeText(this, "Focused on " + detection.label + ". Tap its box again to return to auto-pick.", Toast.LENGTH_LONG).show();
+        });
         taskStatus = findViewById(R.id.locator_task_status);
 
         wireDrawer();
@@ -704,12 +723,15 @@ final List<Detection> uiDets = dets;
                     if (uiTarget != null) {
                         setLocatorStatus(buildStatusLine(uiTarget));
                         announceTarget(uiTarget);
+                    } else if (lockedTargetLabel != null) {
+                        setLocatorStatus("FOCUSED TARGET LOST · " + lockedTargetLabel.toUpperCase(Locale.US)
+                                + " · RE-AIM OR TAP A BOX TO RELEASE");
                     } else if (uiDets.isEmpty()) {
-                        setLocatorStatus("NO TARGETS IN VIEW");
+                        setLocatorStatus("NO OBJECTS DETECTED");
                     } else {
                         setLocatorStatus(uiDets.size()
                                 + " OBJECT" + (uiDets.size() == 1 ? "" : "S")
-                                + " — NONE MATCH FILTER");
+                                + " · NONE MATCH CURRENT FILTER");
                     }
                 });
 
@@ -813,6 +835,28 @@ final List<Detection> uiDets = dets;
      * dead-centre still wins over a large object at the edge.
      */
     private Detection pickPrimaryTarget(List<Detection> dets) {
+        // Explicit tap-to-focus overrides auto-pick. Stay with that same class
+        // and nearby image position; do not silently jump to a different object.
+        String locked = lockedTargetLabel;
+        if (locked != null) {
+            Detection nearest = null;
+            float nearestDistance = Float.MAX_VALUE;
+            for (Detection d : dets) {
+                if (!locked.equalsIgnoreCase(d.label)) continue;
+                float dx = d.centerX() - lockedTargetX;
+                float dy = d.centerY() - lockedTargetY;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearest = d;
+                }
+            }
+            if (nearest == null || nearestDistance > 0.22f) return null;
+            lockedTargetX = nearest.centerX();
+            lockedTargetY = nearest.centerY();
+            return nearest;
+        }
+
         Detection best = null;
         float bestScore = -1f;
         for (Detection d : dets) {
@@ -842,15 +886,17 @@ final List<Detection> uiDets = dets;
                     .replace("·", " · ")
                     .replace("RANGE OUTPUT DISABLED", "Distance and height unavailable")
                     .replace("DETECTOR UNAVAILABLE", "Object detector unavailable");
-            taskStatus.setText(readable);
-            taskStatus.setContentDescription("Locator status: " + readable);
+            if (!readable.contentEquals(taskStatus.getText())) {
+                taskStatus.setText(readable);
+                taskStatus.setContentDescription("Locator status: " + readable);
+            }
         }
     }
 
     private String buildStatusLine(Detection d) {
-        return d.label.toUpperCase(Locale.US)
-                + " · " + directionWord(d.centerX()).toUpperCase(Locale.US)
-                + " · " + Math.round(d.confidence * 100) + "%";
+        String prefix = lockedTargetLabel != null ? "FOCUSED · " : "AUTO PICK · ";
+        return prefix + d.label.toUpperCase(Locale.US)
+                + " · " + directionWord(d.centerX()).toUpperCase(Locale.US);
     }
 
     private static String directionWord(float normX) {
@@ -1191,7 +1237,26 @@ final List<Detection> uiDets = dets;
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (serpentine != null) serpentine.onTouch(ev);
+        if (ev.getAction() == MotionEvent.ACTION_UP && overlayView != null
+                && !isPointInside(ev.getRawX(), ev.getRawY(), R.id.menu_toggle)
+                && !isPointInside(ev.getRawX(), ev.getRawY(), R.id.locator_target_button)
+                && !isPointInside(ev.getRawX(), ev.getRawY(), R.id.voice_mic_fab)
+                && !isPointInside(ev.getRawX(), ev.getRawY(), R.id.locator_task_card)
+                && !isPointInside(ev.getRawX(), ev.getRawY(), R.id.voice_transcript)) {
+            int[] location = new int[2];
+            overlayView.getLocationOnScreen(location);
+            overlayView.handleTap(ev.getRawX() - location[0], ev.getRawY() - location[1]);
+        }
         return super.dispatchTouchEvent(ev);
+    }
+
+    private boolean isPointInside(float x, float y, int viewId) {
+        View view = findViewById(viewId);
+        if (view == null || view.getVisibility() != View.VISIBLE) return false;
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        return x >= location[0] && x <= location[0] + view.getWidth()
+                && y >= location[1] && y <= location[1] + view.getHeight();
     }
 
     @Override
