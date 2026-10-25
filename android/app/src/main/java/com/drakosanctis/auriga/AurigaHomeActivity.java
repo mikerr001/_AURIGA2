@@ -142,6 +142,14 @@ public final class AurigaHomeActivity extends Activity {
         thirdRow.addView(toolCard("Help & controls", "Learn how to use Auriga", "i",
                 () -> open(HelpActivity.class)), weighted());
 
+        LinearLayout fourthRow = row();
+        content.addView(fourthRow, margins(-1, -2, 0, 12, 0, 0));
+        fourthRow.addView(toolCard("Visual place map", "Opt-in local visual memory", "⌂",
+                () -> open(SpatialMapActivity.class)), weighted());
+        fourthRow.addView(gap(12), new LinearLayout.LayoutParams(dp(12), 1));
+        fourthRow.addView(toolCard("Calibration", "Review calibration workflow", "↗",
+                () -> open(CalibrationWalkActivity.class)), weighted());
+
         // Honest, persistent safety state—not a marketing badge.
         LinearLayout safety = column();
         safety.setPadding(dp(15), dp(14), dp(15), dp(14));
