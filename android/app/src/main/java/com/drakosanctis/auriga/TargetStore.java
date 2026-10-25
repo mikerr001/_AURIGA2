@@ -50,7 +50,24 @@ public final class TargetStore {
     private TargetStore() {}
 
     public static Set<String> read(Context ctx) {
-        return readKey(ctx, PREF_KEY, true);
+        Set<String> selection = readKey(ctx, PREF_KEY, true);
+        // Older builds stored ML Kit labels in this key. They are not YOLO/COCO
+        // classes; reset stale selections instead of silently filtering everything out.
+        if (!selection.contains(CATEGORY_ANY)) {
+            for (String selected : selection) {
+                boolean known = false;
+                for (String label : CATEGORIES) {
+                    if (label.equalsIgnoreCase(selected)) { known = true; break; }
+                }
+                if (!known) {
+                    selection.clear();
+                    selection.add(CATEGORY_ANY);
+                    write(ctx, selection);
+                    break;
+                }
+            }
+        }
+        return selection;
     }
 
     /** The legacy ML Kit HUD has a different label taxonomy; keep its settings separate. */
