@@ -22,6 +22,8 @@
       --blue: #9bdcff;
       --amber: #ffd58b;
       --radius: 22px;
+      --text-scale: 1;
+      font-size: calc(16px * var(--text-scale));
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
@@ -47,6 +49,15 @@
     .nav-links { display: flex; align-items: center; gap: 26px; }
     .nav-links a { color: var(--muted); font-size: .9rem; text-decoration: none; }
     .nav-links a:hover { color: var(--ink); }
+    .accessibility-bar { border-bottom: 1px solid var(--line); background: var(--surface); }
+    .accessibility-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+    .accessibility-tools span { margin-right: auto; color: var(--muted); font-size: .78rem; }
+    .accessibility-tools button { min-width: 44px; min-height: 42px; padding: 7px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); color: var(--ink); cursor: pointer; font-weight: 750; }
+    .accessibility-tools button[aria-pressed="true"] { border-color: var(--mint); box-shadow: inset 0 0 0 1px var(--mint); }
+    :root[data-high-contrast="true"] { --bg:#000; --surface:#080808; --surface-2:#171717; --ink:#fff; --muted:#f0f0f0; --line:#fff; --mint:#aaff00; --blue:#80eaff; --amber:#ffed00; color-scheme:dark; }
+    :root[data-high-contrast="true"] a { text-decoration: underline; text-underline-offset: .18em; }
+    :root[data-high-contrast="true"] .button { background:#aaff00; color:#000; border:2px solid #fff; }
+    :root[data-high-contrast="true"] .card, :root[data-high-contrast="true"] .product-row, :root[data-high-contrast="true"] .scene-demo { border-width:2px; }
     .menu { display: none; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); min-width: 44px; min-height: 44px; }
     .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 18px; border: 1px solid transparent; border-radius: 14px; background: var(--mint); color: #071a20; text-decoration: none; font-weight: 850; cursor: pointer; transition: transform .18s ease, background .18s ease; }
     .button:hover { transform: translateY(-2px); background: #c1ffe7; }
@@ -220,6 +231,14 @@
       </nav>
     </div>
   </header>
+  <div class="accessibility-bar" aria-label="Display accessibility controls">
+    <div class="wrap accessibility-tools">
+      <span>Display options</span>
+      <button type="button" id="textSmaller" aria-label="Decrease text size">A−</button>
+      <button type="button" id="textLarger" aria-label="Increase text size">A+</button>
+      <button type="button" id="contrastToggle" aria-pressed="false">High contrast</button>
+    </div>
+  </div>
 
   <main id="main">
     <section class="hero">
@@ -229,8 +248,8 @@
           <h1>More context.<br><em>More independence.</em></h1>
           <p class="hero-copy">Auriga is an experimental on-device copilot designed to make everyday surroundings and information easier to understand. Built around clear feedback, local-first processing, and honest system status.</p>
           <div class="hero-actions">
-            <a class="button" href="#tools">Explore Auriga <span aria-hidden="true">↓</span></a>
-            <a class="button secondary" href="https://github.com/mikerr001/_AURIGA2">View the project ↗</a>
+            <a class="button" href="locator.html">Try the browser prototype ↗</a>
+            <a class="button secondary" href="https://github.com/mikerr001/_AURIGA2/actions">Get an Android build ↗</a>
           </div>
           <div class="trust-row"><span>Native Android tools</span><span>Offline-first direction</span><span>No safety claims without evidence</span></div>
         </div>
@@ -371,6 +390,35 @@
           menu.textContent = "☰";
         });
       });
+      // Display controls are optional enhancements: the page remains usable
+      // if storage is disabled or JavaScript is unavailable.
+      var root = document.documentElement;
+      var smaller = document.getElementById("textSmaller");
+      var larger = document.getElementById("textLarger");
+      var contrast = document.getElementById("contrastToggle");
+      var scale = 1;
+      try {
+        scale = Number(localStorage.getItem("auriga-text-scale")) || 1;
+        scale = Math.max(0.9, Math.min(1.3, scale));
+        root.style.setProperty("--text-scale", String(scale));
+        var savedContrast = localStorage.getItem("auriga-high-contrast") === "true";
+        root.setAttribute("data-high-contrast", String(savedContrast));
+        contrast.setAttribute("aria-pressed", String(savedContrast));
+      } catch (_) {}
+      function updateScale(next) {
+        scale = Math.max(0.9, Math.min(1.3, next));
+        root.style.setProperty("--text-scale", String(scale));
+        try { localStorage.setItem("auriga-text-scale", String(scale)); } catch (_) {}
+      }
+      smaller.addEventListener("click", function () { updateScale(scale - 0.1); });
+      larger.addEventListener("click", function () { updateScale(scale + 0.1); });
+      contrast.addEventListener("click", function () {
+        var enabled = root.getAttribute("data-high-contrast") !== "true";
+        root.setAttribute("data-high-contrast", String(enabled));
+        contrast.setAttribute("aria-pressed", String(enabled));
+        try { localStorage.setItem("auriga-high-contrast", String(enabled)); } catch (_) {}
+      });
+
       var scenes = {
         indoor: { symbol: "⌖", status: "Sample: a door-like object appears on the left. No distance is calculated." },
         crossing: { symbol: "↔", status: "Sample: street scene selected. This demo does not detect traffic or tell you when it is safe to cross." },
