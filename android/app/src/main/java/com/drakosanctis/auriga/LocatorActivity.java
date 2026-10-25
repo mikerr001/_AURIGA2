@@ -176,9 +176,8 @@ public class LocatorActivity extends ComponentActivity {
     private final BroadcastReceiver wakeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context ctx, Intent intent) {
-            if (AurigaVoiceEngine.ACTION_WAKE_WORD.equals(intent.getAction())
-                    && voiceEngine != null) {
-                voiceEngine.startListening();
+            if (AurigaVoiceEngine.ACTION_WAKE_WORD.equals(intent.getAction())) {
+                requestVoiceListening();
             }
         }
     };
@@ -349,7 +348,10 @@ public class LocatorActivity extends ComponentActivity {
         // Long-press on the locator frame as a second activation path.
         FrameLayout locatorFrame = findViewById(R.id.locator_frame);
         if (locatorFrame != null) {
-            voiceEngine.attachLongPressToView(locatorFrame);
+            locatorFrame.setOnLongClickListener(v -> {
+                requestVoiceListening();
+                return true;
+            });
         }
 
         // Mic FAB tap.
