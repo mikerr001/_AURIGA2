@@ -879,6 +879,25 @@ overlayView.setDetections(uiDets, uiTarget);
 
     // ─── Drawer wiring (mirrors LocatorWebActivity) ───────────────
 
+    private void wireTargetPicker() {
+        Button targetButton = findViewById(R.id.locator_target_button);
+        if (targetButton != null) {
+            targetButton.setOnClickListener(v -> safeStart(TargetsActivity.class, "Object targets"));
+            refreshTargetPickerButton();
+        }
+    }
+
+    private void refreshTargetPickerButton() {
+        Button targetButton = findViewById(R.id.locator_target_button);
+        if (targetButton == null) return;
+        Set<String> selection;
+        try { selection = TargetStore.read(this); }
+        catch (Throwable t) { selection = Collections.emptySet(); }
+        String summary = TargetStore.summary(selection);
+        targetButton.setText("TARGETS · " + summary.toUpperCase(Locale.US));
+        targetButton.setContentDescription("Change target selection. Current selection: " + summary);
+    }
+
     private void wireMenuToggle() {
         Button menu = findViewById(R.id.menu_toggle);
         if (menu != null) {
