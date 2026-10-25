@@ -84,56 +84,56 @@ public final class AurigaHomeActivity extends Activity {
 
         TextView headline = text("A little more context.\nA little more independence.", 32, ink, true);
         headline.setLineSpacing(dp(2), 1f);
-        LinearLayout.LayoutParams headlineParams = params(-1, -2, 0, dp(10), 0, 0);
+        LinearLayout.LayoutParams headlineParams = params(-1, -2, 0, 10, 0, 0);
         content.addView(headline, headlineParams);
 
         TextView intro = text("Choose a tool for the task in front of you. The Android app stays native; the browser demo lives separately.", 15, muted, false);
         intro.setLineSpacing(dp(4), 1f);
-        LinearLayout.LayoutParams introParams = params(-1, -2, 0, dp(8), 0, 0);
+        LinearLayout.LayoutParams introParams = params(-1, -2, 0, 8, 0, 0);
         content.addView(intro, introParams);
 
         LinearLayout hero = column();
         hero.setPadding(dp(22), dp(22), dp(22), dp(22));
         hero.setBackground(shape(Color.rgb(17, 43, 57), 24, Color.TRANSPARENT));
-        LinearLayout.LayoutParams heroParams = params(-1, -2, 0, dp(24), 0, 0);
+        LinearLayout.LayoutParams heroParams = params(-1, -2, 0, 24, 0, 0);
         content.addView(hero, heroParams);
 
         TextView heroLabel = text("LIVE CAMERA", 10, Color.rgb(130, 226, 224), true);
         heroLabel.setLetterSpacing(.14f);
         hero.addView(heroLabel);
         TextView heroTitle = text("Understand what’s around you.", 23, Color.WHITE, true);
-        LinearLayout.LayoutParams heroTitleParams = params(-1, -2, 0, dp(10), 0, 0);
+        LinearLayout.LayoutParams heroTitleParams = params(-1, -2, 0, 10, 0, 0);
         hero.addView(heroTitle, heroTitleParams);
         TextView heroCopy = text("Open the native camera view for on-device object detection and spoken cues. Detection availability is shown honestly if a model cannot load.", 14, Color.rgb(207, 223, 229), false);
         heroCopy.setLineSpacing(dp(3), 1f);
-        LinearLayout.LayoutParams heroCopyParams = params(-1, -2, 0, dp(8), 0, 0);
+        LinearLayout.LayoutParams heroCopyParams = params(-1, -2, 0, 8, 0, 0);
         hero.addView(heroCopy, heroCopyParams);
         Button start = button("Start live scan  →", brand, Color.WHITE);
-        LinearLayout.LayoutParams startParams = params(-1, dp(52), 0, dp(18), 0, 0);
+        LinearLayout.LayoutParams startParams = params(-1, dp(52), 0, 18, 0, 0);
         hero.addView(start, startParams);
         start.setOnClickListener(v -> open(LocatorActivity.class));
 
         TextView toolsTitle = text("Your tools", 22, ink, true);
-        LinearLayout.LayoutParams toolsTitleParams = params(-1, -2, 0, dp(10), 0, 0);
+        LinearLayout.LayoutParams toolsTitleParams = params(-1, -2, 0, 10, 0, 0);
         content.addView(toolsTitle, toolsTitleParams);
         TextView toolsCopy = text("Focused tools, one clear purpose each.", 14, muted, false);
         content.addView(toolsCopy);
 
         LinearLayout rowOne = row();
-        LinearLayout.LayoutParams rowParams = params(-1, -2, 0, dp(16), 0, 0);
+        LinearLayout.LayoutParams rowParams = params(-1, -2, 0, 16, 0, 0);
         content.addView(rowOne, rowParams);
         rowOne.addView(module("Read text", "Signs, labels and printed pages", "Aa", () -> open(ReaderActivity.class)), weighted());
         rowOne.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
         rowOne.addView(module("Identify colour", "Name the colour in view", "◉", () -> open(ColorSenseActivity.class)), weighted());
 
         LinearLayout rowTwo = row();
-        content.addView(rowTwo, params(-1, -2, 0, dp(12), 0, 0));
+        content.addView(rowTwo, params(-1, -2, 0, 12, 0, 0));
         rowTwo.addView(module("Object targets", "Choose what to track", "⌖", () -> open(TargetsActivity.class)), weighted());
         rowTwo.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
         rowTwo.addView(module("Calibration", "Improve measurements", "↗", () -> open(CalibrationWalkActivity.class)), weighted());
 
         LinearLayout rowThree = row();
-        content.addView(rowThree, params(-1, -2, 0, dp(12), 0, 0));
+        content.addView(rowThree, params(-1, -2, 0, 12, 0, 0));
         rowThree.addView(module("Connect a camera", "USB, Wi-Fi and supported devices", "⌁", () -> open(CameraConnectActivity.class)), weighted());
         rowThree.addView(spacer(dp(12)), new LinearLayout.LayoutParams(dp(12), 1));
         rowThree.addView(module("Model status", "Check local AI availability", "▦", () -> open(ModelStatusActivity.class)), weighted());
@@ -142,7 +142,7 @@ public final class AurigaHomeActivity extends Activity {
         voice.setGravity(Gravity.CENTER_VERTICAL);
         voice.setPadding(dp(16), dp(14), dp(16), dp(14));
         voice.setBackground(shape(Color.WHITE, 18, border));
-        LinearLayout.LayoutParams voiceParams = params(-1, -2, 0, dp(18), 0, 0);
+        LinearLayout.LayoutParams voiceParams = params(-1, -2, 0, 18, 0, 0);
         content.addView(voice, voiceParams);
         TextView voiceIcon = text("◖", 24, brand, true);
         voice.addView(voiceIcon);
@@ -163,11 +163,11 @@ public final class AurigaHomeActivity extends Activity {
         safety.setPadding(dp(15), dp(14), dp(15), dp(14));
         safety.setBackground(shape(Color.rgb(255, 244, 216), 15, Color.rgb(239, 216, 157)));
         safety.setLineSpacing(dp(3), 1f);
-        content.addView(safety, params(-1, -2, 0, dp(22), 0, 0));
+        content.addView(safety, params(-1, -2, 0, 22, 0, 0));
 
         TextView footer = text("Privacy-first direction · Clear status · User in control", 11, muted, false);
         footer.setGravity(Gravity.CENTER);
-        content.addView(footer, params(-1, -2, 0, dp(20), 0, 0));
+        content.addView(footer, params(-1, -2, 0, 20, 0, 0));
     }
 
     private LinearLayout module(String name, String description, String glyph, Runnable action) {
@@ -180,7 +180,7 @@ public final class AurigaHomeActivity extends Activity {
         icon.setBackground(shape(Color.rgb(224, 244, 243), 13, Color.TRANSPARENT));
         card.addView(icon, new LinearLayout.LayoutParams(dp(42), dp(42)));
         TextView title = text(name, 14, ink, true);
-        LinearLayout.LayoutParams titleParams = params(-1, -2, 0, dp(12), 0, 0);
+        LinearLayout.LayoutParams titleParams = params(-1, -2, 0, 12, 0, 0);
         card.addView(title, titleParams);
         TextView copy = text(description, 12, muted, false);
         copy.setLineSpacing(dp(2), 1f);
