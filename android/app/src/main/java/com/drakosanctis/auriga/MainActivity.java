@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * MainActivity: The "Orchestrator" of the Auriga Ecosystem.
@@ -53,6 +54,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     private static final int PERMISSION_REQUEST_CODE = 1001;
     private boolean cameraPermissionPending = false;
     private final AtomicBoolean mainLoopRunning = new AtomicBoolean(false);
+    private final AtomicInteger mainLoopGeneration = new AtomicInteger(0);
 
     // Target bitmap width for the per-frame scan pipeline. Height is
     // computed dynamically from the live TextureView aspect ratio so a
@@ -1095,11 +1097,14 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
     private void startMainLoop() {
         if (!mainLoopRunning.compareAndSet(false, true)) return;
+        final int loopGeneration = mainLoopGeneration.incrementAndGet();
         // Main high-performance feedback loop (30+ FPS)
         new Thread(new Runnable() {
             @Override
             public void run() {
-                while (mainLoopRunning.get() && !isFinishing()) {
+                while (mainLoopRunning.get()
+                        && mainLoopGeneration.get() == loopGeneration
+                        && !isFinishing()) {
                     // Fix 6: getBitmap() must be called from the UI thread.
                     // Size is the aspect-preserving active bitmap computed
                     // from the TextureView geometry in onSurfaceTextureAvailable;
@@ -1154,7 +1159,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                         break;
                     }
                 }
-                mainLoopRunning.set(false);
+                if (mainLoopGeneration.get() == loopGeneration) {
+                    mainLoopRunning.set(false);
+                }
             }
         }, "AurigaNavigationLoop").start();
     }
@@ -1554,6 +1561,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         // Fires during teardown regardless of init outcome; skip cleanly if
         // camera's initStep never produced an instance.
         mainLoopRunning.set(false);
+        mainLoopGeneration.incrementAndGet();
         if (camera != null) camera.stop();
         return true;
     }
@@ -1594,6 +1602,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     @Override
     protected void onDestroy() {
         mainLoopRunning.set(false);
+        mainLoopGeneration.incrementAndGet();
         if (camera != null) camera.release();
         super.onDestroy();
         // Unregister AI download listener to avoid leaking this Activity.
