@@ -79,17 +79,7 @@
             </intent-filter>
         </activity>
 
-        <!--
-            Legacy web-replica Object Locator HUD. Still registered so
-            LocatorActivity's "model not bundled" panel can hand off
-            to it as a fallback. No longer the launcher activity.
-        -->
-        <activity
-            android:name=".LocatorWebActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/AurigaHUDTheme" />
+        <!-- The browser prototype is a separate Netlify site, not packaged in the native APK. -->
 
         <!-- Legacy native HUD (ML Kit + native DrakoVoice). Still available
              for diagnostics and in-house testing; reachable by intent but
