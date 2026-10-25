@@ -25,11 +25,56 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate deploy source
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install function dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate deploy source and local links
         run: |
           test -f website/web_deploy/index.html
+          test -f website/web_deploy/locator.html
+          test -f website/web_deploy/camera-connect.html
           test -f netlify.toml
           test -f website/netlify/functions/submit-feedback.js
+          node --check website/netlify/functions/submit-feedback.js
+          python3 - <<'PY'
+          import json, os
+          from html.parser import HTMLParser
+          from urllib.parse import urlparse, unquote
+          root = "website/web_deploy"
+          pages = ["index.html", "locator.html", "camera-connect.html"]
+          errors = []
+          class Parser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.refs = []
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  for key in ("href", "src", "poster"):
+                      if attrs.get(key): self.refs.append(attrs[key])
+          for page in pages:
+              path = os.path.join(root, page)
+              parser = Parser()
+              with open(path, encoding="utf-8") as fh: parser.feed(fh.read())
+              for ref in parser.refs:
+                  parsed = urlparse(ref)
+                  if parsed.scheme or parsed.netloc or ref.startswith(("data:", "mailto:", "tel:", "javascript:")): continue
+                  target = unquote(parsed.path)
+                  if target and not os.path.isfile(os.path.normpath(os.path.join(root, target.lstrip("/")))):
+                      errors.append(f"{page}: missing local reference {ref}")
+              print(f"Checked {page}: {len(parser.refs)} references")
+          with open(os.path.join(root, "manifest.json"), encoding="utf-8") as fh:
+              json.load(fh)
+          if errors:
+              for error in errors: print("::error::" + error)
+              raise SystemExit(1)
+          print("Website checks passed.")
+          PY
 
       - name: Deploy production site from main, preview from feature branch
         env:
@@ -40,9 +85,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
-            echo '::error::Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID repository secret.'
-            echo 'Add both under Settings > Secrets and variables > Actions to enable deployment.'
-            exit 1
+            echo '::warning::Netlify deploy skipped because NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID is not configured.'
+            echo 'Add both repository secrets to enable this workflow, or enable Netlify Git deployment for the configured branch.'
+            exit 0
           fi
           args=(
             deploy
