@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.RecognitionListener;
@@ -72,6 +73,7 @@ public class AurigaVoiceEngine implements RecognitionListener {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private SpeechRecognizer recognizer;
+    private boolean usingOnDeviceRecognizer = false;
     private TextToSpeech tts;
     private boolean ttsReady  = false;
     private volatile boolean listening = false;
@@ -161,6 +163,9 @@ public class AurigaVoiceEngine implements RecognitionListener {
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                if (usingOnDeviceRecognizer) {
+                    intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+                }
                 intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
                 intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
                 recognizer.startListening(intent);
@@ -260,10 +265,21 @@ public class AurigaVoiceEngine implements RecognitionListener {
     private void initRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(activity)) return;
         try {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(activity);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    && SpeechRecognizer.isOnDeviceRecognitionAvailable(activity)) {
+                recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(activity);
+                usingOnDeviceRecognizer = true;
+            } else {
+                // Older Android releases or devices without an installed
+                // on-device recognizer use the system's configured provider.
+                recognizer = SpeechRecognizer.createSpeechRecognizer(activity);
+                usingOnDeviceRecognizer = false;
+            }
             recognizer.setRecognitionListener(this);
         } catch (Throwable t) {
+            Log.w("AurigaVoiceEngine", "Could not initialise speech recognizer", t);
             recognizer = null;
+            usingOnDeviceRecognizer = false;
         }
     }
 
