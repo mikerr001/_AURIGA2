@@ -114,8 +114,13 @@ public final class AurigaHomeActivity extends Activity {
 
         Button start = button("Choose an object  →", Color.rgb(156, 243, 213), INK, Color.TRANSPARENT);
         scanCard.addView(start, margins(-1, dp(52), 0, 18, 0, 0));
-        start.setContentDescription("Open the native live camera scanner. Camera permission will be requested if needed.");
-        start.setOnClickListener(v -> open(LocatorActivity.class));
+        start.setContentDescription("Choose which object Auriga should locate.");
+        start.setOnClickListener(v -> open(TargetsActivity.class));
+
+        Button explore = button("Open live scene instead", Color.rgb(37, 64, 75), Color.WHITE, Color.rgb(72, 104, 114));
+        scanCard.addView(explore, margins(-1, dp(48), 0, 10, 0, 0));
+        explore.setContentDescription("Open the live camera without changing the current target selection.");
+        explore.setOnClickListener(v -> open(LocatorActivity.class));
 
         TextView toolsHeading = text("Other tasks", 20, INK, true);
         content.addView(toolsHeading, margins(-1, -2, 0, 26, 0, 5));
