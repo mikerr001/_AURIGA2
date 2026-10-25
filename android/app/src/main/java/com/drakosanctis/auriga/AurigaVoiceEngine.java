@@ -2,9 +2,10 @@ package com.drakosanctis.auriga;
 
 import android.app.Activity;
 import android.content.Context;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,6 +16,8 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -72,7 +75,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
     private TextToSpeech tts;
     private boolean ttsReady  = false;
     private boolean listening  = false;
-    private boolean systemMuted = false;
 
     /* OpenClaw-style skill engine: handles all non-navigation commands */
     private AurigaSkillEngine skillEngine;
@@ -130,48 +132,52 @@ public class AurigaVoiceEngine implements RecognitionListener {
     public void startListening() {
         if (listening) return;
         if (!isVoiceNavEnabled(activity)) {
-            Toast.makeText(activity,
-                    "Voice navigation is muted. Long-press to re-enable.",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Voice navigation is muted. Re-enable it in settings.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(activity, "Microphone permission is required. Allow it in Android app settings.", Toast.LENGTH_LONG).show();
+            if (listener != null) listener.onListeningStopped();
             return;
         }
         if (!SpeechRecognizer.isRecognitionAvailable(activity)) {
-            Toast.makeText(activity,
-                    "Speech recognition not available on this device.",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Speech recognition is not available on this device.", Toast.LENGTH_LONG).show();
             return;
         }
-        try {
-            // Pause the always-on wake service so both SpeechRecognizers
-            // don't fight over the single microphone.
-            AurigaVoiceService.stopListening(activity);
-
-            listening = true;
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-            intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
-            // Silence the "mic-on" ding for the window between startListening()
-            // and onReadyForSpeech() — same guard used by AurigaVoiceService.
-            muteSystem();
-            recognizer.startListening(intent);
-            if (listener != null) listener.onListeningStarted();
-        } catch (Throwable t) {
-            unmuteSystem();
-            listening = false;
-            AurigaVoiceService.startListening(activity); // restore wake service
-            if (listener != null) listener.onListeningStopped();
+        if (recognizer == null) initRecognizer();
+        if (recognizer == null) {
+            Toast.makeText(activity, "Could not initialise speech recognition.", Toast.LENGTH_LONG).show();
+            return;
         }
+        // The wake-word service owns AudioRecord. Let Android release the mic before recognition starts.
+        listening = true;
+        AurigaVoiceService.stopListening(activity);
+        mainHandler.postDelayed(() -> {
+            if (!listening || paused || activity.isFinishing()) return;
+            try {
+                if (recognizer == null) initRecognizer();
+                if (recognizer == null) throw new IllegalStateException("Speech recognizer unavailable");
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+                recognizer.startListening(intent);
+                if (listener != null) listener.onListeningStarted();
+            } catch (Throwable t) {
+                Log.e("AurigaVoiceEngine", "Unable to start speech recognition", t);
+                listening = false;
+                if (!paused) AurigaVoiceService.startListening(activity);
+                if (listener != null) listener.onListeningStopped();
+                Toast.makeText(activity, "Microphone could not start. Check permission and close other recording apps.", Toast.LENGTH_LONG).show();
+            }
+        }, 400);
     }
 
-    /** Stop the current listen cycle. */
+    /** Stop the current listen cycle without changing system volume. */
     public void stopListening() {
-        try {
-            if (recognizer != null) recognizer.stopListening();
-        } catch (Throwable ignored) {}
         listening = false;
+        try { if (recognizer != null) recognizer.cancel(); } catch (Throwable ignored) {}
         if (listener != null) listener.onListeningStopped();
     }
 
@@ -213,6 +219,7 @@ public class AurigaVoiceEngine implements RecognitionListener {
 
     /** Call from the host activity's {@code onResume}. */
     public void onResume() {
+        paused = false;
         if (recognizer == null) {
             initRecognizer();
         }
@@ -220,6 +227,7 @@ public class AurigaVoiceEngine implements RecognitionListener {
 
     /** Call from the host activity's {@code onPause} to free the mic. */
     public void onPause() {
+        paused = true;
         stopListening();
         try {
             if (recognizer != null) { recognizer.destroy(); recognizer = null; }
@@ -228,7 +236,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
 
     /** Call from {@code onDestroy} to release all resources. */
     public void shutdown() {
-        unmuteSystem(); // always clean up before releasing resources
         try {
             if (recognizer != null) {
                 recognizer.cancel();
@@ -246,35 +253,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
         ttsReady = false;
         listening = false;
         if (mindEngine != null) { mindEngine.close(); mindEngine = null; }
-    }
-
-    // ── System audio mute helpers ────────────────────────────────────
-    // Suppress the SpeechRecognizer "mic-on" ding for the short window
-    // between startListening() and onReadyForSpeech(). Min SDK is 24
-    // so ADJUST_MUTE / ADJUST_UNMUTE are always available.
-
-    private void muteSystem() {
-        if (systemMuted) return;
-        try {
-            AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.adjustStreamVolume(AudioManager.STREAM_SYSTEM,
-                        AudioManager.ADJUST_MUTE, 0);
-                systemMuted = true;
-            }
-        } catch (Throwable ignored) {}
-    }
-
-    private void unmuteSystem() {
-        if (!systemMuted) return;
-        try {
-            AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.adjustStreamVolume(AudioManager.STREAM_SYSTEM,
-                        AudioManager.ADJUST_UNMUTE, 0);
-                systemMuted = false;
-            }
-        } catch (Throwable ignored) {}
     }
 
     // ── Init ────────────────────────────────────────────────────────
@@ -379,7 +357,6 @@ public class AurigaVoiceEngine implements RecognitionListener {
 
     @Override public void onReadyForSpeech(Bundle params) {
         // Recognizer is fully initialised — safe to lift the ding suppression.
-        unmuteSystem();
     }
     @Override public void onBeginningOfSpeech() {}
     @Override public void onRmsChanged(float rmsdB) {}
@@ -388,26 +365,23 @@ public class AurigaVoiceEngine implements RecognitionListener {
 
     @Override
     public void onError(int error) {
-        // Always unmute so we don't leave STREAM_SYSTEM permanently silenced
-        // if the recognizer bails out before onReadyForSpeech fires.
-        unmuteSystem();
+        boolean wasListening = listening;
         listening = false;
         mainHandler.post(() -> {
-            try {
-                if (recognizer != null) { recognizer.destroy(); recognizer = null; }
-            } catch (Throwable ignored) {}
+            try { if (recognizer != null) { recognizer.destroy(); recognizer = null; } } catch (Throwable ignored) {}
             initRecognizer();
-            AurigaVoiceService.startListening(activity);
+            if (!paused && wasListening && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) AurigaVoiceService.startListening(activity);
+            if (listener != null) listener.onListeningStopped();
         });
-        if (listener != null) listener.onListeningStopped();
     }
 
     @Override
     public void onResults(Bundle results) {
-        unmuteSystem(); // safety net — should already be clear
+        boolean wasListening = listening;
         listening = false;
         if (listener != null) listener.onListeningStopped();
-        AurigaVoiceService.startListening(activity);
+        if (!paused && wasListening && ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) AurigaVoiceService.startListening(activity);
+        if (!wasListening) return;
         ArrayList<String> matches =
                 results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches != null && !matches.isEmpty()) {
