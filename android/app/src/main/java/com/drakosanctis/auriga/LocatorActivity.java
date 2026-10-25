@@ -205,6 +205,7 @@ public class LocatorActivity extends ComponentActivity {
 
         wireDrawer();
         wireMenuToggle();
+        wireTargetPicker();
         initVoiceNavigation();
 
         // Try to load the YOLO model. tryCreate() returns null when
