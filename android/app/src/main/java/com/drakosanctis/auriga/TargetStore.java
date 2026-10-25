@@ -47,6 +47,19 @@ public final class TargetStore {
         "backpack", "umbrella", "handbag", "tie", "suitcase", "cell phone", "book", "bottle"
     };
 
+    public static final String[] GROUP_NAMES = {
+        "People & animals", "Vehicles & street", "Personal items & tech",
+        "Sports & outdoors", "Food & drink", "Home & everyday"
+    };
+    public static final String[][] GROUPS = {
+        {"person", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "teddy bear"},
+        {"bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter", "bench"},
+        {"backpack", "umbrella", "handbag", "tie", "suitcase", "cell phone", "laptop", "mouse", "remote", "keyboard", "book", "clock", "scissors", "hair drier", "toothbrush"},
+        {"frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket"},
+        {"bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"},
+        {"chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "microwave", "oven", "toaster", "sink", "refrigerator", "vase"}
+    };
+
     private TargetStore() {}
 
     public static Set<String> read(Context ctx) {
